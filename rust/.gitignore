@@ -1,0 +1,34 @@
+# ide-specific
+.vscode/
+.idea/
+*.code-workspace
+
+temp
+
+# ignore all hidden files by default
+.*
+.*/
+# EXCEPT .gitignore, .gitkeep, .github
+!.gitignore
+!.gitattributes
+!.gitkeep
+!.github/
+# avoid triggering cargo watch
+!.ignore
+
+# rust specific
+debug/
+target/
+**/*.rs.bk
+!.cargo
+# trunk specific
+dist/
+# tauri specific
+gen/
+# fastly specific
+bin/
+pkg/
+
+# log
+*.log
+log/

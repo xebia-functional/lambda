@@ -1,0 +1,38 @@
+# include = [
+#   "**/Cargo.toml",
+#   "**/config.toml",
+#   "**/Makefile.toml",
+#   "**/rust-toolchain.toml",
+#   "**/rustfmt.toml",
+#   "**/taplo.toml",
+# ]
+
+# [formatting]
+# array_auto_collapse = false
+# array_auto_expand = false
+# column_width = 120
+# reorder_keys = false
+
+# [[rule]]
+# include = ["**/Cargo.toml"]
+# keys = ["dependencies"]
+
+# [rule.formatting]
+# align_entries = false
+# align_comments = true
+# allowed_blank_lines = 2
+# array_auto_expand = false
+# array_trailing_comma = false
+# array_auto_collapse = true
+# compact_arrays = true
+# compact_inline_tables = false
+# indent_string = "\t"
+# inline_table_expand = true
+# compact_entries = false
+# column_width = 80
+# indent_entries = false
+# indent_tables = false
+# reorder_keys = true
+# reorder_arrays = false
+# trailing_newline = true
+# crlf = false

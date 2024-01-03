@@ -1,0 +1,9 @@
+set dotenv-load
+
+# deploy lambda
+deploy bin: build
+  cargo lambda deploy {{bin}}  
+
+# build lambda
+build:
+  cargo lambda build
