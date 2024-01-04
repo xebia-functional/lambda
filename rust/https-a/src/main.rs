@@ -8,6 +8,14 @@ use serde_json;
 use sha3::{Digest, Sha3_512};
 use uuid::Uuid;
 
+fn read_param<T: std::str::FromStr>(event: &Request, name: &str, dflt: T) -> T {
+    event
+        .query_string_parameters_ref()
+        .and_then(|params| params.first(name))
+        .and_then(|c| c.parse::<T>().ok())
+        .unwrap_or(dflt)
+}
+
 /// - https://github.com/awslabs/aws-lambda-rust-runtime/tree/main/examples
 async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     // let shared_config = aws_config::load_from_env().await;
@@ -20,21 +28,9 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     // Extract some useful information from the request
     //
     //
-    let chars = event
-        .query_string_parameters_ref()
-        .and_then(|params| params.first("chars"))
-        .and_then(|c| c.parse::<usize>().ok())
-        .unwrap_or(1024);
-    let hashes = event
-        .query_string_parameters_ref()
-        .and_then(|params| params.first("hashes"))
-        .and_then(|h| h.parse::<u16>().ok())
-        .unwrap_or(100);
-    let msgs = event
-        .query_string_parameters_ref()
-        .and_then(|params| params.first("msgs"))
-        .and_then(|m| m.parse::<usize>().ok())
-        .unwrap_or(64);
+    let chars = read_param(&event, "chars", 1024usize);
+    let hashes = read_param(&event, "hashes", 100u16);
+    let msgs = read_param(&event, "msgs", 64usize);
 
     // (0..msgs).
 
