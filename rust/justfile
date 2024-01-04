@@ -7,3 +7,7 @@ deploy bin: build
 # build lambda
 build:
   cargo lambda build
+
+# install tools
+tools:
+  cargo install cargo-lambda
