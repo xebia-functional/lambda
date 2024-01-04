@@ -10,6 +10,7 @@ aws-config.workspace = true
 aws-sdk-dynamodb.workspace = true
 lambda_http.workspace = true
 lambda_runtime.workspace = true
+rand.workspace = true
 sha3.workspace = true
 tokio.workspace = true
 tracing.workspace = true

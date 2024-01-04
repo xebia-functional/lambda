@@ -1,5 +1,8 @@
 // use aws_sdk_dynamodb::Client; //, Error};
 use lambda_http::{run, service_fn, Body, Error, Request, RequestExt, Response};
+use rand::distributions::Alphanumeric;
+use rand::{thread_rng, Rng};
+use sha3::{Digest, Sha3_512};
 
 /// - https://github.com/awslabs/aws-lambda-rust-runtime/tree/main/examples
 async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
@@ -11,22 +14,38 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     // let message = format!("Current DynamoDB tables: {:?}", resp.table_names);
 
     // Extract some useful information from the request
-    let who = event
+    //
+    //
+    let chars = event
         .query_string_parameters_ref()
-        .and_then(|params| params.first("name"))
-        .unwrap_or("world");
+        .and_then(|params| params.first("chars"))
+        .and_then(|c| c.parse::<usize>().ok())
+        .unwrap_or(1024);
+    let hashes = event
+        .query_string_parameters_ref()
+        .and_then(|params| params.first("hashes"))
+        .and_then(|h| h.parse::<usize>().ok())
+        .unwrap_or(100);
+    let msgs = event
+        .query_string_parameters_ref()
+        .and_then(|params| params.first("msgs"))
+        .unwrap_or("64");
 
-    use sha3::{Digest, Sha3_512};
+    let mut rng = thread_rng();
+    let doc: String = (&mut rng)
+        .sample_iter(Alphanumeric)
+        .take(chars)
+        .map(char::from)
+        .collect();
 
-    let mut hasher = Sha3_512::new();
-    let data = b"Hello world!";
-    hasher.update(data);
-    // `update` can be called repeatedly and is generic over `AsRef<[u8]>`
-    hasher.update("String data");
-    // Note that calling `finalize()` consumes hasher
-    let hash = hasher.finalize();
+    let hash = (0..hashes).into_iter().fold(doc.clone(), |a, _| {
+        Sha3_512::digest(a)
+            .iter()
+            .map(|b| format!("{b:02X}"))
+            .collect()
+    });
 
-    let message = format!("Hello {who}, AWS Lambda HTTP {:?}", hash);
+    let message = format!("DOC: {doc}\n HASH: {hash}");
 
     // Return something that implements IntoResponse.
     // It will be serialized to the right response event automatically by the runtime
