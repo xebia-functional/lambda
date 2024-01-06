@@ -1,81 +1,27 @@
+use std::str::FromStr;
+
 use data::Datum;
 
-use aws_sdk_dynamodb::Client;
+use aws_sdk_kinesis::Client;
 use lambda_http::{run, service_fn, Body, Error, Request, RequestExt, Response};
-use rand::distributions::Alphanumeric;
-use rand::{thread_rng, Rng};
-// use serde::{Deserialize, Serialize};
-use serde_dynamo::to_attribute_value;
-use sha3::{Digest, Sha3_512};
-use tracing::info;
-use uuid::Uuid;
-// use serde_json;
 
-fn read_param<T: std::str::FromStr>(event: &Request, name: &str, dflt: T) -> T {
-	event
-		.query_string_parameters_ref()
-		.and_then(|params| params.first(name))
-		.and_then(|c| c.parse::<T>().ok())
-		.unwrap_or(dflt)
-}
-
-async fn handle_request(db_client: &Client, event: Request) -> Result<Response<Body>, Error> {
-	let chars = read_param(&event, "chars", 1024usize);
-	let hashes = read_param(&event, "hashes", 100u16);
-	let msgs = read_param(&event, "msgs", 64usize);
-
-	// info!(payload = %s, "JSON Payload received");
-
-	// (0..msgs).
-
-	let mut rng = thread_rng();
-	let doc: String = (&mut rng)
-		.sample_iter(Alphanumeric)
-		.take(chars)
-		.map(char::from)
-		.collect();
-
-	let hash = Some((0..hashes).into_iter().fold(doc.clone(), |a, _| {
-		Sha3_512::digest(a)
-			.iter()
-			.map(|b| format!("{b:02X}"))
-			.collect()
-	}));
-
-	let datum = Datum {
-		uuid: Uuid::new_v4(),
-		doc,
-		hashes,
-		hash,
-	};
-
-	let msg = serde_json::to_string(&datum).unwrap();
-
-	// add_datum(db_client, datum.clone(), "Datum").await?;
-
-	// Return something that implements IntoResponse.
-	// It will be serialized to the right response event automatically by the runtime
-	let resp = Response::builder()
-		.status(200)
-		.header("content-type", "text/html")
-		.body(msg.into())
-		.map_err(Box::new)?;
-	Ok(resp)
-}
+////////////////////////////////////////////////////////////////////////////////
+///                               Entry point.                               ///
+////////////////////////////////////////////////////////////////////////////////
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
+	// Initialize the logger. Disable per-line module name and time printing,
+	// since CloudWatch will take care of this.
 	tracing_subscriber::fmt()
 		.with_max_level(tracing::Level::INFO)
-		// disable printing the name of the module in every log line.
 		.with_target(false)
-		// disabling time is handy because CloudWatch will add the ingestion time.
 		.without_time()
 		.init();
 
-	//Get config from environment.
+	// Create the DynamoDB client using configuration data supplied through the
+	// environment.
 	let config = aws_config::load_from_env().await;
-	//Create the DynamoDB client.
 	let client = Client::new(&config);
 
 	run(service_fn(|event: Request| async {
@@ -84,24 +30,74 @@ async fn main() -> Result<(), Error> {
 	.await
 }
 
-// TODO: Add a datum to a table.
-pub async fn add_datum(client: &Client, d: Datum, table: &str) -> Result<(), Error> {
-	// let uuid_av = to_attribute_value(d.uuid)?;
-	// let doc_av = to_attribute_value(d.doc)?;
-	// let hashes_av = to_attribute_value(d.hashes)?;
-	// let hash_av = to_attribute_value(d.hash)?;
+////////////////////////////////////////////////////////////////////////////////
+///                                Endpoints.                                ///
+////////////////////////////////////////////////////////////////////////////////
 
-	// let request = client
-	// .put_item()
-	// .table_name(table)
-	// .item("uuid", uuid_av)
-	// .item("doc", doc_av)
-	// .item("hashes", hashes_av)
-	// .item("hash", hash_av);
+async fn handle_request(
+	kinesis: &Client,
+	event: Request
+) -> Result<Response<Body>, Error> {
+	// Extract the query parameters from the request.
+	let chars = param_or_default(&event, LENGTH_PARAM, 1024usize);
+	let hashes = param_or_default(&event, HASHES_PARAM, 100u16);
+	let messages = param_or_default(&event, MESSAGES_PARAM, 64usize);
 
-	// info!("adding item to DynamoDB");
+	// Produce the requested number of random messages.
+	let mut batch = Vec::with_capacity(messages);
+	for _ in 0 .. messages {
+		batch.push(Datum::random(chars, hashes).to_json()?);
+	}
 
-	// let _resp = request.send().await?;
+	// Post the messages to Kinesis.
+	post_data(kinesis, batch).await?;
 
+	// Respond with a simple affirmation.
+	let resp = Response::builder()
+		.status(200)
+		.header("content-type", "text/html")
+		.body(format!("{} messages posted to Kinesis.", messages).into())
+		.map_err(Box::new)?;
+	Ok(resp)
+}
+
+////////////////////////////////////////////////////////////////////////////////
+///                                Utilities.                                ///
+////////////////////////////////////////////////////////////////////////////////
+
+/// Read the first occurrence of the named query parameter from the
+/// [request](Request), returning a default value if it is not present or cannot
+/// be parsed as a `T`.
+fn param_or_default<T: FromStr>(event: &Request, name: &str, default: T) -> T {
+	event
+		.query_string_parameters_ref()
+		.and_then(|params| params.first(name))
+		.and_then(|c| c.parse::<T>().ok())
+		.unwrap_or(default)
+}
+
+// Post the given batch of messages to the Kinesis stream designated by the
+// environment.
+async fn post_data(
+	client: &Client,
+	batch: impl IntoIterator<Item = String>
+) -> Result<(), Error> {
+	// TODO: Implement this.
 	Ok(())
 }
+
+////////////////////////////////////////////////////////////////////////////////
+///                                Constants.                                ///
+////////////////////////////////////////////////////////////////////////////////
+
+/// The name of the query parameter that specifies the number of random
+/// characters to generate.
+const LENGTH_PARAM: &str = "chars";
+
+/// The name of the query parameter that specifies the number of hash iterations
+/// to perform.
+const HASHES_PARAM: &str = "hashes";
+
+/// The name of the query parameter that specifies the number of messages to
+/// post to Kinesis.
+const MESSAGES_PARAM: &str = "msgs";

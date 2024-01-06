@@ -13,19 +13,23 @@ lto = true
 opt-level = 2
 
 [workspace.package]
-authors = ["Paul LaCrosse <paul.lacrosse@xebia.com>"]
+authors = [
+	"Paul LaCrosse <paul.lacrosse@xebia.com>",
+	"Todd L Smith <todd.smith@xebia.com"
+]
 version = "0.1.0"
 edition = "2021"
 publish = false
 
 [workspace.dependencies]
-data = { path = "./data" }
-
 aws-config = { version = "1.1", features = ["behavior-version-latest"] }
 aws_lambda_events = { version = "0.13", default-features = false, features = [
   "kinesis",
 ] }
 aws-sdk-dynamodb = "1.9"
+aws-sdk-kinesis = "1.9"
+data = { path = "./data" }
+dotenv = "0.15.0"
 lambda_http = "0.9"
 lambda_runtime = "0.9"
 rand = "0.8"
