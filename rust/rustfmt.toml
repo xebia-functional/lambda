@@ -1,8 +1,8 @@
 edition = "2021"
 max_width = 100
 hard_tabs = true
-# tab_spaces = 4
-# newline_style = "Unix"
+tab_spaces = 4
+newline_style = "Unix"
 # use_small_heuristics = "Default"
 # indent_style = "Visual"
 # wrap_comments = false
