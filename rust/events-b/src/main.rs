@@ -12,9 +12,9 @@ async fn function_handler(
 	db_client: &Client,
 	event: LambdaEvent<KinesisEvent>,
 ) -> Result<(), Error> {
-	// let datum=serde_json::from_str(event.)
+	let datum=serde_json::from_str(event.)
 
-	// add_datum(db_client, datum.clone(), "Datum").await?;
+	add_datum(db_client, datum.clone(), "CostOptLambdaData").await?;
 
 	Ok(())
 }
