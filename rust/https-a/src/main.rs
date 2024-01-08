@@ -34,10 +34,7 @@ async fn main() -> Result<(), Error> {
 ///                                Endpoints.                                ///
 ////////////////////////////////////////////////////////////////////////////////
 
-async fn handle_request(
-	kinesis: &Client,
-	event: Request
-) -> Result<Response<Body>, Error> {
+async fn handle_request(kinesis: &Client, event: Request) -> Result<Response<Body>, Error> {
 	// Extract the query parameters from the request.
 	let chars = param_or_default(&event, LENGTH_PARAM, 1024usize);
 	let hashes = param_or_default(&event, HASHES_PARAM, 100u16);
@@ -45,7 +42,7 @@ async fn handle_request(
 
 	// Produce the requested number of random messages.
 	let mut batch = Vec::with_capacity(messages);
-	for _ in 0 .. messages {
+	for _ in 0..messages {
 		batch.push(Datum::random(chars, hashes).to_json()?);
 	}
 
@@ -78,10 +75,7 @@ fn param_or_default<T: FromStr>(event: &Request, name: &str, default: T) -> T {
 
 // Post the given batch of messages to the Kinesis stream designated by the
 // environment.
-async fn post_data(
-	client: &Client,
-	batch: impl IntoIterator<Item = String>
-) -> Result<(), Error> {
+async fn post_data(client: &Client, batch: impl IntoIterator<Item = String>) -> Result<(), Error> {
 	// TODO: Implement this.
 	Ok(())
 }

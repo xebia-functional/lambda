@@ -1,4 +1,4 @@
-use rand::{thread_rng, Rng, distributions::Alphanumeric};
+use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 use sha3::{Digest, Sha3_512};
 use uuid::Uuid;
@@ -21,7 +21,7 @@ pub struct Datum {
 	pub hashes: u16,
 
 	/// The SHA-512 hash of the document, computed by `events-a`.
-	pub hash: Option<String>
+	pub hash: Option<String>,
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -43,7 +43,7 @@ impl Datum {
 					.collect()
 			},
 			hashes,
-			hash: None
+			hash: None,
 		}
 	}
 }
@@ -59,13 +59,12 @@ impl Datum {
 		match self.hash {
 			Some(_) => (),
 			None => {
-				self.hash = Some((0 .. self.hashes).into_iter()
-					.fold(self.doc.clone(), |a, _| {
-						Sha3_512::digest(a)
-							.iter()
-							.map(|b| format!("{b:02X}"))
-							.collect()
-					}));
+				self.hash = Some((0..self.hashes).into_iter().fold(self.doc.clone(), |a, _| {
+					Sha3_512::digest(a)
+						.iter()
+						.map(|b| format!("{b:02X}"))
+						.collect()
+				}));
 			}
 		}
 	}
