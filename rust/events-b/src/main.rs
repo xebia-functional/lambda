@@ -1,6 +1,6 @@
 use aws_lambda_events::event::kinesis::KinesisEvent;
-use aws_sdk_dynamodb::{Client, types::AttributeValue};
-use base64::{Engine, engine::general_purpose::STANDARD};
+use aws_sdk_dynamodb::{types::AttributeValue, Client};
+use base64::{engine::general_purpose::STANDARD, Engine};
 use data::Datum;
 use lambda_runtime::{run, service_fn, Error, LambdaEvent};
 
@@ -35,10 +35,7 @@ async fn main() -> Result<(), Error> {
 
 /// Process an incoming Kinetic [event](KinesisEvent) by storing it into
 /// DynamoDB. Incoming messages are JSON serializations of [`Data`](Datum).
-async fn handle_request(
-	db: &Client,
-	event: LambdaEvent<KinesisEvent>
-) -> Result<(), Error> {
+async fn handle_request(db: &Client, event: LambdaEvent<KinesisEvent>) -> Result<(), Error> {
 	let write = std::env::var(WRITE_TABLE)?;
 	let mut records = vec![];
 	event.payload.records.iter().for_each(|record| {
@@ -58,11 +55,7 @@ async fn handle_request(
 ////////////////////////////////////////////////////////////////////////////////
 
 /// Add a [`Datum`] to the specified DynamoDB table.
-pub async fn add_datum(
-	db: &Client,
-	table: &str,
-	d: Datum,
-) -> Result<(), Error> {
+pub async fn add_datum(db: &Client, table: &str, d: Datum) -> Result<(), Error> {
 	let uuid = AttributeValue::S(d.uuid.to_string());
 	let doc = AttributeValue::S(d.doc);
 	let hashes = AttributeValue::N(d.hashes.to_string());
