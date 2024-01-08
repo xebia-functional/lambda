@@ -1,13 +1,20 @@
-use aws_lambda_events::event::kinesis::KinesisEvent;
-use lambda_runtime::{run, service_fn, Error, LambdaEvent};
+use data::Datum;
 
-/// This is the main body for the function.
-/// Write your code inside it.
-/// There are some code example in the following URLs:
-/// - https://github.com/awslabs/aws-lambda-rust-runtime/tree/main/examples
-/// - https://github.com/aws-samples/serverless-rust-demo/
-async fn function_handler(event: LambdaEvent<KinesisEvent>) -> Result<(), Error> {
-	// Extract some useful information from the request
+use aws_lambda_events::event::kinesis::KinesisEvent;
+use aws_sdk_dynamodb::Client;
+use lambda_runtime::{run, service_fn, Error, LambdaEvent};
+// use serde::{Deserialize, Serialize};
+use serde_dynamo::to_attribute_value;
+use tracing::info;
+// use serde_json;
+
+async fn function_handler(
+	db_client: &Client,
+	event: LambdaEvent<KinesisEvent>,
+) -> Result<(), Error> {
+	// let datum=serde_json::from_str(event.)
+
+	// add_datum(db_client, datum.clone(), "Datum").await?;
 
 	Ok(())
 }
@@ -22,5 +29,35 @@ async fn main() -> Result<(), Error> {
 		.without_time()
 		.init();
 
-	run(service_fn(function_handler)).await
+	//Get config from environment.
+	let config = aws_config::load_from_env().await;
+	//Create the DynamoDB client.
+	let client = Client::new(&config);
+
+	run(service_fn(|event: LambdaEvent<KinesisEvent>| async {
+		function_handler(&client, event).await
+	}))
+	.await
+}
+
+// TODO: Add a datum to a table.
+pub async fn add_datum(client: &Client, d: Datum, table: &str) -> Result<(), Error> {
+	// let uuid_av = to_attribute_value(d.uuid)?;
+	// let doc_av = to_attribute_value(d.doc)?;
+	// let hashes_av = to_attribute_value(d.hashes)?;
+	// let hash_av = to_attribute_value(d.hash)?;
+
+	// let request = client
+	// .put_item()
+	// .table_name(table)
+	// .item("uuid", uuid_av)
+	// .item("doc", doc_av)
+	// .item("hashes", hashes_av)
+	// .item("hash", hash_av);
+
+	// info!("adding item to DynamoDB");
+
+	// let _resp = request.send().await?;
+
+	Ok(())
 }

@@ -892,11 +892,23 @@ dependencies = [
 name = "events-b"
 version = "0.1.0"
 dependencies = [
+ "aws-config",
+ "aws-sdk-dynamodb 1.9.0",
+ "aws-sdk-kinesis",
  "aws_lambda_events",
+ "data",
+ "dotenv",
+ "lambda_http",
  "lambda_runtime",
+ "rand",
+ "serde",
+ "serde_dynamo",
+ "serde_json",
+ "sha3",
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]
