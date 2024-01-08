@@ -1,12 +1,18 @@
 set dotenv-load
 
+# build lambda
+build:
+  cargo lambda build
+
 # deploy lambda
 deploy bin: build
   cargo lambda deploy {{bin}}  
 
-# build lambda
-build:
-  cargo lambda build
+# clean everything
+clean:
+  cargo cache -a
+  cargo clean
+  rm Cargo.lock
 
 # install tools
 tools:
