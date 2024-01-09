@@ -61,15 +61,10 @@ impl Datum {
 			Some(_) => (),
 			None => {
 				self.hash = Some((0..self.hashes).fold(self.doc.clone(), |a, _| {
-					Sha3_512::digest(a)
-						.iter()
-						.fold(
-							String::new(),
-							|mut a, b| {
-								write!(&mut a, "{b:02X}").unwrap();
-								a
-							}
-						)
+					Sha3_512::digest(a).iter().fold(String::new(), |mut a, b| {
+						write!(&mut a, "{b:02X}").unwrap();
+						a
+					})
 				}));
 			}
 		}
