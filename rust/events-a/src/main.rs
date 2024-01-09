@@ -1,9 +1,9 @@
 use aws_lambda_events::event::kinesis::KinesisEvent;
 use aws_sdk_dynamodb::primitives::Blob;
 use aws_sdk_kinesis::{types::builders::PutRecordsRequestEntryBuilder, Client};
-use base64::{Engine, engine::general_purpose::STANDARD};
 use data::Datum;
 use lambda_runtime::{run, service_fn, Error, LambdaEvent};
+use tracing::{info, trace, debug};
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -15,7 +15,7 @@ async fn main() -> Result<(), Error> {
 	// Initialize the logger. Disable per-line module name and time printing,
 	// since CloudWatch will take care of this.
 	tracing_subscriber::fmt()
-		.with_max_level(tracing::Level::INFO)
+		.with_max_level(tracing::Level::TRACE)
 		.with_target(false)
 		.without_time()
 		.init();
@@ -23,6 +23,7 @@ async fn main() -> Result<(), Error> {
 	// Create the Kinesis client using configuration data supplied through the
 	// environment.
 	let config = aws_config::load_from_env().await;
+	info!("Loaded configuration: {:?}", config);
 	let kinesis = Client::new(&config);
 
 	run(service_fn(|event: LambdaEvent<KinesisEvent>| async {
@@ -42,13 +43,18 @@ async fn handle_request(
 	kinesis: &Client,
 	event: LambdaEvent<KinesisEvent>
 ) -> Result<(), Error> {
+	debug!("Received event: {:?}", event);
 	let write = std::env::var(WRITE_STREAM)?;
+	debug!("Posting messages to Kinesis stream: {}", write);
 	let mut entries = vec![];
 	event.payload.records.iter().for_each(|record| {
-		let data = STANDARD.decode(&record.kinesis.data.0).unwrap();
-		let data = String::from_utf8(data).unwrap();
+		trace!("Incoming record: {:?}", record);
+		let data = String::from_utf8_lossy(&record.kinesis.data.0);
+		trace!("JSON: {:?}", data);
 		let mut data: Datum = serde_json::from_str(&data).unwrap();
+		trace!("Deserialized datum: {:?}", data);
 		data.hash();
+		trace!("Outgoing datum: {:?}", data);
 		let data = data.to_json().unwrap();
 		let blob = Blob::new(data.into_bytes());
 		let entry = PutRecordsRequestEntryBuilder::default()
@@ -58,12 +64,14 @@ async fn handle_request(
 			.unwrap();
 		entries.push(entry);
 	});
-	kinesis
+	debug!("Posting messages: {}", entries.len());
+	let resp = kinesis
 		.put_records()
-		.stream_name(write)
+		.stream_arn(write)
 		.set_records(Some(entries))
 		.send()
 		.await?;
+	debug!("Posted messages: {:?}", resp);
 	Ok(())
 }
 
@@ -74,4 +82,4 @@ async fn handle_request(
 /// The name of the environment variable that specifies the name of the Kinesis
 /// stream to which messages should be posted. This environment exists in the
 /// Lambda execution environment, not in the local development environment.
-const WRITE_STREAM: &str = "KINESIS_STREAM_B";
+const WRITE_STREAM: &str = "KINESIS_EVENT_B";

@@ -5,6 +5,7 @@ use data::Datum;
 
 use aws_sdk_kinesis::{Client, types::builders::PutRecordsRequestEntryBuilder};
 use lambda_http::{run, service_fn, Body, Error, Request, RequestExt, Response};
+use tracing::{info, debug, trace};
 
 ////////////////////////////////////////////////////////////////////////////////
 ///                               Entry point.                               ///
@@ -15,7 +16,7 @@ async fn main() -> Result<(), Error> {
 	// Initialize the logger. Disable per-line module name and time printing,
 	// since CloudWatch will take care of this.
 	tracing_subscriber::fmt()
-		.with_max_level(tracing::Level::INFO)
+		.with_max_level(tracing::Level::TRACE)
 		.with_target(false)
 		.without_time()
 		.init();
@@ -23,6 +24,7 @@ async fn main() -> Result<(), Error> {
 	// Create the Kinesis client using configuration data supplied through the
 	// environment.
 	let config = aws_config::load_from_env().await;
+	info!("Loaded configuration: {:?}", config);
 	let kinesis = Client::new(&config);
 
 	run(service_fn(|event: Request| async {
@@ -40,20 +42,30 @@ async fn main() -> Result<(), Error> {
 /// - `chars`: The number of random characters to generate per message.
 /// - `hashes`: The number of hash iterations to perform per message.
 /// - `msgs`: The number of messages to post to Kinesis.
-async fn handle_request(kinesis: &Client, event: Request) -> Result<Response<Body>, Error> {
+async fn handle_request(
+	kinesis: &Client,
+	event: Request
+) -> Result<Response<Body>, Error> {
+	debug!("Received request: {:?}", event);
+
 	// Extract the query parameters from the request.
 	let chars = param_or_default(&event, LENGTH_PARAM, 1024usize);
 	let hashes = param_or_default(&event, HASHES_PARAM, 100u16);
 	let messages = param_or_default(&event, MESSAGES_PARAM, 64usize);
+	debug!("chars={}, hashes={}, messages={}", chars, hashes, messages);
 
 	// Produce the requested number of random messages.
 	let mut batch = Vec::with_capacity(messages);
 	for _ in 0..messages {
-		batch.push(Datum::random(chars, hashes));
+		let datum = Datum::random(chars, hashes);
+		trace!("Generated datum: {:?}", &datum);
+		batch.push(datum);
 	}
+	trace!("Generated messages: {}", batch.len());
 
 	// Post the messages to Kinesis.
 	let succeeded = post_data(kinesis, batch).await?;
+	info!("Posted messages: {}", succeeded);
 
 	// Respond with a simple affirmation.
 	let resp = Response::builder()
@@ -61,6 +73,7 @@ async fn handle_request(kinesis: &Client, event: Request) -> Result<Response<Bod
 		.header("content-type", "text/html")
 		.body(format!("{} messages posted to Kinesis.", succeeded).into())
 		.map_err(Box::new)?;
+	trace!("Responded with: {:?}", &resp);
 	Ok(resp)
 }
 
@@ -87,6 +100,7 @@ async fn post_data(
 	batch: impl IntoIterator<Item = Datum>
 ) -> Result<usize, Error> {
 	let write = std::env::var(WRITE_STREAM)?;
+	debug!("Posting messages to Kinesis stream: {}", write);
 	let entries = batch
 		.into_iter()
 		.flat_map(|datum| {
@@ -100,11 +114,12 @@ async fn post_data(
 		.collect();
 	let output = kinesis
 		.put_records()
-		.stream_name(write)
+		.stream_arn(write)
 		.set_records(Some(entries))
 		.send()
 		.await?;
 	let failed = output.failed_record_count.unwrap_or_default();
+	debug!("Failed to post messages: {}", failed);
 	let succeeded = output.records().len() - failed as usize;
 	Ok(succeeded)
 }
@@ -128,4 +143,4 @@ const MESSAGES_PARAM: &str = "msgs";
 /// The name of the environment variable that specifies the name of the Kinesis
 /// stream to which messages should be posted. This environment exists in the
 /// Lambda execution environment, not in the local development environment.
-const WRITE_STREAM: &str = "KINESIS_STREAM_A";
+const WRITE_STREAM: &str = "KINESIS_EVENT_A";
