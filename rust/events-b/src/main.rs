@@ -65,12 +65,14 @@ pub async fn add_datum(
 ) -> Result<(), Error> {
 	let uuid = AttributeValue::S(d.uuid.to_string());
 	let doc = AttributeValue::S(d.doc);
+	let hashes = AttributeValue::N(d.hashes.to_string());
 	let hash = AttributeValue::N(d.hash.unwrap().to_string());
 	let request = db
 		.put_item()
 		.table_name(table)
 		.item("uuid", uuid)
 		.item("doc", doc)
+		.item("hashes", hashes)
 		.item("hash", hash);
 	request.send().await?;
 	Ok(())
