@@ -2,11 +2,11 @@ set dotenv-load
 
 # build lambda
 build:
-  cargo lambda build
+  cargo lambda build --release
 
 # deploy lambda
 deploy bin: build
-  cargo lambda deploy -v -p default {{bin}}
+  cargo lambda deploy --s3-bucket xf-rust {{bin}}
 
 # clean everything
 clean:

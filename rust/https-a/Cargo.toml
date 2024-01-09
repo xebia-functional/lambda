@@ -5,6 +5,18 @@ version.workspace = true
 edition.workspace = true
 publish.workspace = true
 
+[package.metadata.lambda.deploy]
+# memory = 512                   # Function's memory
+# timeout = 60                   # Function's execution timeout
+# tracing = "active"             # Tracing mode
+# role = "role-full-arn"         # Function's execution role
+# env_file = ".env.production"   # File to load environment variables from
+# env = { "VAR1" = "VAL1" }      # Additional environment variables
+# layers = [                     # List of layers to deploy with your function
+#     "layer-full-arn"
+# ]
+# tags = { "team" = "lambda" }   # List of AWS resource tags for this function
+
 [dependencies]
 data.workspace = true
 
