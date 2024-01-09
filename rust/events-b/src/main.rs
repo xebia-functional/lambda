@@ -1,63 +1,86 @@
-use data::Datum;
-
 use aws_lambda_events::event::kinesis::KinesisEvent;
-use aws_sdk_dynamodb::Client;
+use aws_sdk_dynamodb::{Client, types::AttributeValue};
+use base64::{Engine, engine::general_purpose::STANDARD};
+use data::Datum;
 use lambda_runtime::{run, service_fn, Error, LambdaEvent};
-// use serde::{Deserialize, Serialize};
-use serde_dynamo::to_attribute_value;
-use tracing::info;
-// use serde_json;
 
-async fn function_handler(
-	db_client: &Client,
-	event: LambdaEvent<KinesisEvent>,
-) -> Result<(), Error> {
-	let datum=serde_json::from_str(event.)
-
-	add_datum(db_client, datum.clone(), "CostOptLambdaData").await?;
-
-	Ok(())
-}
+////////////////////////////////////////////////////////////////////////////////
+///                               Entry point.                               ///
+////////////////////////////////////////////////////////////////////////////////
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
+	// Initialize the logger. Disable per-line module name and time printing,
+	// since CloudWatch will take care of this.
 	tracing_subscriber::fmt()
 		.with_max_level(tracing::Level::INFO)
-		// disable printing the name of the module in every log line.
 		.with_target(false)
-		// disabling time is handy because CloudWatch will add the ingestion time.
 		.without_time()
 		.init();
 
-	//Get config from environment.
+	// Create the DynamoDB client using configuration data supplied through the
+	// environment.
 	let config = aws_config::load_from_env().await;
-	//Create the DynamoDB client.
-	let client = Client::new(&config);
+	let db = Client::new(&config);
 
 	run(service_fn(|event: LambdaEvent<KinesisEvent>| async {
-		function_handler(&client, event).await
+		handle_request(&db, event).await
 	}))
 	.await
 }
 
-// TODO: Add a datum to a table.
-pub async fn add_datum(client: &Client, d: Datum, table: &str) -> Result<(), Error> {
-	// let uuid_av = to_attribute_value(d.uuid)?;
-	// let doc_av = to_attribute_value(d.doc)?;
-	// let hashes_av = to_attribute_value(d.hashes)?;
-	// let hash_av = to_attribute_value(d.hash)?;
+////////////////////////////////////////////////////////////////////////////////
+///                                Endpoints.                                ///
+////////////////////////////////////////////////////////////////////////////////
 
-	// let request = client
-	// .put_item()
-	// .table_name(table)
-	// .item("uuid", uuid_av)
-	// .item("doc", doc_av)
-	// .item("hashes", hashes_av)
-	// .item("hash", hash_av);
-
-	// info!("adding item to DynamoDB");
-
-	// let _resp = request.send().await?;
-
+/// Process an incoming Kinetic [event](KinesisEvent) by storing it into
+/// DynamoDB. Incoming messages are JSON serializations of [`Data`](Datum).
+async fn handle_request(
+	db: &Client,
+	event: LambdaEvent<KinesisEvent>
+) -> Result<(), Error> {
+	let write = std::env::var(WRITE_TABLE)?;
+	let mut records = vec![];
+	event.payload.records.iter().for_each(|record| {
+		let data = STANDARD.decode(&record.kinesis.data.0).unwrap();
+		let data = String::from_utf8(data).unwrap();
+		let datum: Datum = serde_json::from_str(&data).unwrap();
+		records.push(datum);
+	});
+	for record in records {
+		add_datum(db, &write, record).await?;
+	}
 	Ok(())
 }
+
+////////////////////////////////////////////////////////////////////////////////
+///                                Utilities.                                ///
+////////////////////////////////////////////////////////////////////////////////
+
+/// Add a [`Datum`] to the specified DynamoDB table.
+pub async fn add_datum(
+	db: &Client,
+	table: &str,
+	d: Datum,
+) -> Result<(), Error> {
+	let uuid = AttributeValue::S(d.uuid.to_string());
+	let doc = AttributeValue::S(d.doc);
+	let hash = AttributeValue::N(d.hash.unwrap().to_string());
+	let request = db
+		.put_item()
+		.table_name(table)
+		.item("uuid", uuid)
+		.item("doc", doc)
+		.item("hash", hash);
+	request.send().await?;
+	Ok(())
+}
+
+////////////////////////////////////////////////////////////////////////////////
+///                                Constants.                                ///
+////////////////////////////////////////////////////////////////////////////////
+
+/// The name of the environment variable that specifies the name of the DynamoDB
+/// table wherein messages should be recorded. This environment exists in the
+/// Lambda execution environment, not in the local development environment.
+const WRITE_TABLE: &str = "CostOptLambdaData";

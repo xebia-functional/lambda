@@ -1,6 +1,7 @@
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 use sha3::{Digest, Sha3_512};
+use std::fmt::Write;
 use uuid::Uuid;
 
 /// `Datum` represents an arbitrary document. Instances are generated
@@ -59,11 +60,16 @@ impl Datum {
 		match self.hash {
 			Some(_) => (),
 			None => {
-				self.hash = Some((0..self.hashes).into_iter().fold(self.doc.clone(), |a, _| {
+				self.hash = Some((0..self.hashes).fold(self.doc.clone(), |a, _| {
 					Sha3_512::digest(a)
 						.iter()
-						.map(|b| format!("{b:02X}"))
-						.collect()
+						.fold(
+							String::new(),
+							|mut a, b| {
+								write!(&mut a, "{b:02X}").unwrap();
+								a
+							}
+						)
 				}));
 			}
 		}

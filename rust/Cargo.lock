@@ -881,8 +881,14 @@ checksum = "5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5"
 name = "events-a"
 version = "0.1.0"
 dependencies = [
+ "aws-config",
+ "aws-sdk-dynamodb 1.9.0",
+ "aws-sdk-kinesis",
  "aws_lambda_events",
+ "base64",
+ "data",
  "lambda_runtime",
+ "serde_json",
  "tokio",
  "tracing",
  "tracing-subscriber",
@@ -896,6 +902,7 @@ dependencies = [
  "aws-sdk-dynamodb 1.9.0",
  "aws-sdk-kinesis",
  "aws_lambda_events",
+ "base64",
  "data",
  "dotenv",
  "lambda_http",

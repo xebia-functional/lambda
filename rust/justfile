@@ -6,7 +6,7 @@ build:
 
 # deploy lambda
 deploy bin: build
-  cargo lambda deploy {{bin}}  
+  cargo lambda deploy -v -p default {{bin}}
 
 # clean everything
 clean:
