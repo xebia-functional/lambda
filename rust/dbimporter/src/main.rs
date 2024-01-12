@@ -6,8 +6,8 @@ use std::str::FromStr;
 // import software.amazon.awssdk.core.SdkBytes
 
 use aws_sdk_dynamodb::{types::AttributeValue, Client};
-use aws_lambda_events::event::    //kinesis::KinesisEvent;
-use lambda_runtime::{run, service_fn, Error, LambdaEvent};
+// use aws_lambda_events::event::    //kinesis::KinesisEvent;
+// use lambda_runtime::{run, service_fn, Error, LambdaEvent};
 use tracing::{debug, info, trace};
 use aws_sdk_dynamodb::{primitives::Blob, types::AttributeValue, Client};
 use lambda_http::{run, service_fn, Body, Error, Request, RequestExt, Response};

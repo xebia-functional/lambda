@@ -1,12 +1,16 @@
 [workspace]
 resolver = "2"
-members = ["data", "https-a", "events-a", "events-b"]
-default-members = ["https-a", "events-a", "events-b"]
+members = ["data", "dbimporter", "https-a", "events-a", "events-b"]
+default-members = ["dbimporter", "https-a", "events-a", "events-b"]
 exclude = []
 
 [profile.release]
 opt-level = 2 # fast and small
 lto = true
+
+# Optimize all dependencies even in debug builds:
+[profile.dev.package."*"]
+opt-level = 2
 
 [workspace.package]
 authors = [
