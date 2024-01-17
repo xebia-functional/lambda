@@ -34,7 +34,10 @@ pub async fn handler(db: &Client, event: Request) -> Result<impl IntoResponse, E
 		.payload::<Vec<StockPriceItem>>()?
 		.iter()
 		.flatten()
-		.map(|d| async { add_item(d, &db).await })
+		.map(|d| async {
+			trace!("{:?}", d.clone());
+			add_item(d, &db).await
+		})
 		.fold(0, |acc, x| acc + block_on(x).unwrap_or(0));
 
 	let resp: Response<String> = Response::builder()
@@ -51,8 +54,8 @@ async fn add_item(d: &StockPriceItem, db: &Client) -> Result<i32, Error> {
 	db.put_item()
 		.table_name("StockPriceItems")
 		.item("symbol", AttributeValue::S(d.symbol.to_owned()))
-		.item("time", AttributeValue::S(d.time.to_owned()))
-		.item("prices", AttributeValue::S(d.prices.to_owned()))
+		.item("time", AttributeValue::N(d.time.to_string()))
+		.item("prices", AttributeValue::S(d.prices.to_owned())) // TODO: convert to B blob type
 		.send()
 		.await?;
 
@@ -64,6 +67,6 @@ async fn add_item(d: &StockPriceItem, db: &Client) -> Result<i32, Error> {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct StockPriceItem {
 	pub symbol: String,
-	pub time: String,
+	pub time: u32,
 	pub prices: String,
 }

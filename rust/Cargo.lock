@@ -836,6 +836,7 @@ version = "0.1.0"
 dependencies = [
  "aws-config",
  "aws-sdk-dynamodb 1.10.1",
+ "base64",
  "dotenv",
  "futures",
  "lambda_http",
