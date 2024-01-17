@@ -9,6 +9,7 @@ import com.amazonaws.services.kinesis.{AmazonKinesisAsync, AmazonKinesisAsyncCli
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPResponse
+import com.xebia.lambda.{Datum, Kinesis}
 
 import scala.util.Try
 import scala.jdk.CollectionConverters.*
@@ -32,9 +33,7 @@ object HttpAApp extends RequestHandler[Request[_], APIGatewayV2HTTPResponse] {
   /// Lambda execution environment, not in the local development environment.
   val WRITE_STREAM = "KINESIS_EVENT_A"
 
-  def kinesisClient: IO[AmazonKinesisAsync] = IO(
-    AmazonKinesisAsyncClientBuilder.defaultClient()
-  )
+  
 
   private def getParameterOrDefault(event: Request[_], key: String, default: Int): Int =
     (for {
@@ -48,17 +47,7 @@ object HttpAApp extends RequestHandler[Request[_], APIGatewayV2HTTPResponse] {
     val hashes = getParameterOrDefault(event, HASHES_PARAM, 100)
     val messages = getParameterOrDefault(event, MESSAGES_PARAM, 64)
     val data:IO[List[Datum]] = List.fill(messages)((chars, hashes)).traverse(Datum.random[IO].tupled)
-    data.map(postData(kinesis, _)).map(_ => makeResponse(messages))
-
-
-  def postData(kinesis: AmazonKinesisAsync, data: List[Datum]): IO[Unit] =
-    val putReq: PutRecordsRequest = PutRecordsRequest().withStreamName(WRITE_STREAM)
-    putReq.withRecords(data.map(datum => PutRecordsRequestEntry().withPartitionKey(datum.uuid.toString).withData(Datum.serialize(datum))): _*)
-    val putRes: IO[PutRecordsResult] = {
-      val fut = kinesis.putRecordsAsync(putReq)
-      IO.blocking(fut.get())
-    }
-    putRes.void
+    data.map(Kinesis.postData(kinesis, WRITE_STREAM, _)).map(_ => makeResponse(messages))
 
   def makeResponse(nbMessages: Int): APIGatewayV2HTTPResponse =
     APIGatewayV2HTTPResponse.builder()
@@ -70,7 +59,7 @@ object HttpAApp extends RequestHandler[Request[_], APIGatewayV2HTTPResponse] {
   def handleRequest(event: Request[_], ctx: Context): APIGatewayV2HTTPResponse =
     import cats.effect.unsafe.implicits.global
     val prog = for {
-      kinesis <- kinesisClient
+      kinesis <- Kinesis.kinesisClient
       response <- handleRequestIO(kinesis, event)
     } yield response
     prog.unsafeRunSync()

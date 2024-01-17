@@ -1,13 +1,11 @@
-package com.xebia.lambda.httpA
-
-import cats.Functor
-import cats.effect.kernel.Sync
-import cats.effect.std.Random
-import cats.implicits._
+package com.xebia.lambda
 
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import java.util.UUID
+
+import cats.effect.Sync, cats.effect.std.Random
+import cats.implicits.*
 
 case class Datum (uuid: UUID, doc: String, hashes: Int, hash: Option[String])
 

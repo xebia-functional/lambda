@@ -18,6 +18,11 @@ lazy val commonSettings: Seq[Setting[_]] = Seq(
     }
 )
 
+lazy val circeSettings = Seq(
+  libraryDependencies ++= Seq("io.circe" %% "circe-core",
+  "io.circe" %% "circe-generic",
+  "io.circe" %% "circe-parser"
+).map(_ % "0.15.0-M1"))
 
 
 inThisBuild(Seq(
@@ -33,15 +38,21 @@ lazy val root = project
     name := "lambda"
   ).aggregate(httpA, eventsA, eventsB)
 
+lazy val data = project
+  .settings(commonSettings ++ circeSettings)
+  .in(file("data"))
 
 lazy val httpA = project
   .in(file("http-a"))
-  .settings(commonSettings)
+  .dependsOn(data)
 
 lazy val eventsA = project
   .in(file("events-a"))
-  .settings(commonSettings)
+  .settings(
+    libraryDependencies += "pt.kcry" %% "sha" % "2.0.1"
+  )
+  .dependsOn(data)
 
 lazy val eventsB = project
   .in(file("events-b"))
-  .settings(commonSettings)
+  .dependsOn(data)
