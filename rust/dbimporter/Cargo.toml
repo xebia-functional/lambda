@@ -18,19 +18,20 @@ publish.workspace = true
 # tags = { "team" = "lambda" }   # List of AWS resource tags for this function
 
 [dependencies]
-data.workspace = true
+# data.workspace = true
 
 aws-config.workspace = true
 aws-sdk-dynamodb.workspace = true
 dotenv.workspace = true
+futures.workspace = true
 lambda_http.workspace = true
-lambda_runtime.workspace = true
-rand.workspace = true
+# lambda_runtime.workspace = true
+# rand.workspace = true
 serde.workspace = true
 serde_dynamo.workspace = true
 serde_json.workspace = true
-sha3.workspace = true
+# sha3.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
-uuid.workspace = true
+# uuid.workspace = true

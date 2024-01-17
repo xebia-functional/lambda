@@ -4,12 +4,6 @@ use sha3::{Digest, Sha3_512};
 use std::fmt::Write;
 use uuid::Uuid;
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
-pub struct StockPriceItem {
-	pub symbol: String,
-	pub time: String,
-	pub prices: String,
-}
 // val dynamoDBAttributeMap: java.util.Map[String, AttributeValue] =
 //   val pricesByteArray = try Base64.getDecoder.decode(prices) catch
 //     case _ => throw ParseException("could not decode base64", prices)
