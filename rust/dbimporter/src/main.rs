@@ -1,5 +1,6 @@
 use aws_config::BehaviorVersion;
-use aws_sdk_dynamodb::{types::AttributeValue, Client};
+use aws_sdk_dynamodb::{primitives::Blob, types::AttributeValue, Client};
+use base64::prelude::*;
 use futures::executor::block_on;
 use lambda_http::{
 	http::{Response, StatusCode},
@@ -54,7 +55,10 @@ async fn add_item(d: &StockPriceItem, db: &Client) -> Result<i32, Error> {
 		.table_name("StockPriceItems")
 		.item("symbol", AttributeValue::S(d.symbol.to_owned()))
 		.item("time", AttributeValue::N(d.time.to_string()))
-		.item("prices", AttributeValue::S(d.prices.to_owned())) // TODO: convert to B blob type
+		.item(
+			"prices",
+			AttributeValue::B(Blob::new(BASE64_STANDARD.decode(d.prices.to_owned())?)),
+		)
 		.send()
 		.await?;
 

@@ -25,4 +25,4 @@ clean:
 # install tools
 tools:
   cargo install cargo-lambda
-  cargo install just e
+  cargo install just
