@@ -1,4 +1,5 @@
-package com.xebia.lambda.eventsA
+package com.xebia.lambda
+package eventsA
 
 import cats.implicits.*
 import cats.effect.IO
@@ -30,19 +31,26 @@ object EventsAApp extends RequestHandler[KinesisEvent, Unit]{
   override def handleRequest(event: KinesisEvent, context: Context): Unit =
     import cats.effect.unsafe.implicits.global
     val parser = new JawnParser()
+    given log: Logger[IO] = Logger.ioLogger(context.getLogger)
     val prg = 
       for 
-        hashedRecords <- IO.fromEither(event.getRecords.asScala.toList.traverse(processRecord(parser))) 
+        _ <- log.debug(s"Received event: $event")
+        hashedRecords <- event.getRecords.asScala.toList.traverse(processRecord(parser)) 
         kinesis <- Kinesis.kinesisClient
         _ <- Kinesis.postData(kinesis, WRITE_STREAM, hashedRecords)
       yield ()
     prg.unsafeRunSync()
 
-  def processRecord(parser: JawnParser)(record: KinesisEventRecord): Either[Throwable, Datum] =
+  def processRecord(parser: JawnParser)(record: KinesisEventRecord)(using log: Logger[IO]): IO[Datum] =
     for 
-      json <- parser.parseByteBuffer(record.getKinesis.getData)
-      datum <- json.as[Datum]
-    yield datum.computeHash
+      _ <- log.trace(s"Incoming record: $record")
+      json <- IO.fromEither(parser.parseByteBuffer(record.getKinesis.getData))
+      _ <- log.trace(s"JSON: $json")
+      datum <- IO.fromEither(json.as[Datum])
+      _ <- log.trace(s"Deserialized datum: $datum")
+      hashed = datum.computeHash
+      _ <- log.trace(s"Outgoing datum: $hashed")
+    yield hashed
 
 
 }
