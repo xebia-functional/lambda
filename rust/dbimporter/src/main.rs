@@ -1,3 +1,4 @@
+use aws_config::BehaviorVersion;
 use aws_sdk_dynamodb::{types::AttributeValue, Client};
 use futures::executor::block_on;
 use lambda_http::{
@@ -5,22 +6,20 @@ use lambda_http::{
 	run, service_fn, Error, IntoResponse, Request, RequestPayloadExt,
 };
 use serde::{Deserialize, Serialize};
-// use serde_json::json;
-// use std::str::FromStr;
-use tracing::{debug, info, trace};
+use tracing::{info, warn};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
 	tracing_subscriber::fmt()
-		.with_max_level(tracing::Level::TRACE)
+		.with_max_level(tracing::Level::INFO)
 		.with_target(false)
 		.without_time()
 		.init();
 
-	let cfg = aws_config::load_from_env().await;
-	info!("Loaded configuration: {:?}", cfg);
+	let cfg = aws_config::load_defaults(BehaviorVersion::latest()).await;
 	let db = Client::new(&cfg);
 
+	info!("Starting dbimporter");
 	run(service_fn(|event: Request| async {
 		handler(&db, event).await
 	}))
@@ -28,14 +27,14 @@ async fn main() -> Result<(), Error> {
 }
 
 pub async fn handler(db: &Client, event: Request) -> Result<impl IntoResponse, Error> {
-	debug!("Received request: {:?}", event);
+	info!("Received request: {:?}", event);
 
 	let cnt: i32 = event
 		.payload::<Vec<StockPriceItem>>()?
 		.iter()
 		.flatten()
 		.map(|d| async {
-			trace!("{:?}", d.clone());
+			warn!("{:?}", d.clone());
 			add_item(d, &db).await
 		})
 		.fold(0, |acc, x| acc + block_on(x).unwrap_or(0));
@@ -46,7 +45,7 @@ pub async fn handler(db: &Client, event: Request) -> Result<impl IntoResponse, E
 		.body(format!("{} messages inserted into DynamoDB", cnt).into())
 		.map_err(Box::new)?;
 
-	trace!("Responded with: {:?}", &resp);
+	info!("Responded with: {:?}", &resp);
 	Ok(resp)
 }
 
@@ -59,7 +58,7 @@ async fn add_item(d: &StockPriceItem, db: &Client) -> Result<i32, Error> {
 		.send()
 		.await?;
 
-	trace!("Stored StockPriceItem");
+	info!("Stored StockPriceItem");
 
 	Ok(1)
 }
