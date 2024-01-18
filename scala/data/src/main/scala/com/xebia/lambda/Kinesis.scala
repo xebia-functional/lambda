@@ -9,8 +9,8 @@ object Kinesis {
     AmazonKinesisAsyncClientBuilder.defaultClient()
   )
 
-  def postData(kinesis: AmazonKinesisAsync, stream: String, data: List[Datum]): IO[Unit] =
-    val putReq: PutRecordsRequest = PutRecordsRequest().withStreamName(stream)
+  def postData(kinesis: AmazonKinesisAsync, stream: String, data: List[Datum])(using log: Logger[IO]): IO[Int] =
+    val putReq: PutRecordsRequest = PutRecordsRequest().withStreamARN(stream)
     putReq.withRecords(data.map(datum =>
       PutRecordsRequestEntry()
         .withPartitionKey(datum.uuid.toString)
@@ -20,5 +20,12 @@ object Kinesis {
       val fut = kinesis.putRecordsAsync(putReq)
       IO.blocking(fut.get())
     }
-    putRes.void
+
+    log.debug(s"Posting messages to Kinesis stream: $stream") *> putRes.flatMap(res =>
+      val successfullyPutRecords = res.getRecords.size() - res.getFailedRecordCount
+      if res.getFailedRecordCount > 0 then
+        log.debug(s"Failed to post ${res.getFailedRecordCount} records") *> IO.pure(successfullyPutRecords)
+      else IO.pure(successfullyPutRecords)
+
+    )
 }
