@@ -1,0 +1,12 @@
+{
+	"name": "data",
+	"version": "1.0.0",
+	"author": {
+		"name": "Todd L Smith",
+		"email": "todd.smith@xebia.com"
+	},
+	"type": "module",
+	"dependencies": {
+		"sha3": "2.1.4"
+	}
+}

@@ -1,0 +1,28 @@
+{
+	"name": "events-a",
+	"version": "1.0.0",
+	"author": {
+		"name": "Todd L Smith",
+		"email": "todd.smith@xebia.com"
+	},
+	"type": "module",
+	"dependencies": {
+		"@aws-sdk/client-dynamodb": "3.485.0",
+		"@aws-sdk/client-kinesis": "3.485.0",
+		"data": "file:../data",
+		"node": "21.2.0"
+	},
+	"devDependencies": {
+		"@types/aws-lambda": "8.10.131",
+		"@types/node": "20.11.0",
+		"esbuild": "0.19.11"
+	},
+	"scripts": {
+		"typecheck": "tsc",
+		"prebuild": "rm -rf dist",
+		"build": "esbuild src/index.ts --bundle --minify --sourcemap --platform=node --target=esnext --outfile=dist/index.js",
+		"postbuild": "cd dist && zip -r events-a.zip index.js*",
+		"create": "cd dist && aws lambda create-function --function-name events-a-ts --runtime nodejs20.x --role arn:aws:iam::516203532587:role/LambdaFn --zip-file fileb://events-a.zip --handler index.handler",
+		"deploy": "cd dist && aws lambda update-function-code --function-name events-a-ts --zip-file fileb://events-a.zip"
+	}
+}

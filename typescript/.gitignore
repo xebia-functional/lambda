@@ -1,0 +1,7 @@
+# Ignore build folders.
+dist
+node_modules
+
+# Ignore deployment binaries.
+events-a.zip
+events-b.zip

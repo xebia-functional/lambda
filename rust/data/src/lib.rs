@@ -30,7 +30,7 @@ pub struct Datum {
 	/// The target iteration count for the SHA-512 hash.
 	pub hashes: u16,
 
-	/// The SHA-512 hash of the document, computed by `events-a`.
+	/// The hash of the document, computed by `events-a`.
 	pub hash: Option<String>,
 }
 
