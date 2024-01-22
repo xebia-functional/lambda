@@ -1,10 +1,11 @@
 import
-	{
-		KinesisClient,
-		PutRecordsCommand,
-		PutRecordsInput,
-		PutRecordsRequestEntry
-	} from "@aws-sdk/client-kinesis";
+{
+	KinesisClient,
+	PutRecordsCommand,
+	PutRecordsCommandOutput,
+	PutRecordsInput,
+	PutRecordsRequestEntry
+} from "@aws-sdk/client-kinesis";
 import { Handler, KinesisStreamEvent } from "aws-lambda";
 import { Datum } from "../../data/src/data.js";
 
@@ -26,7 +27,7 @@ const WRITE_STREAM = process.env["KINESIS_EVENT_B"];
  * @param event
  *   The {@link KinesisStreamEvent Kinesis event}.
  * @returns
- *   The {@link PutRecordCommandOutput Kinesis response}.
+ *   The {@link PutRecordsCommandOutput Kinesis response}.
  */
 export const handler: Handler = async (
 	event: KinesisStreamEvent
@@ -73,7 +74,7 @@ export const handler: Handler = async (
 		Records: entries,
 		StreamARN: writeStream
 	};
-	const putRecordsCommand = new PutRecordsCommand(putRecordsInput);
-	const response = await kinesis.send(putRecordsCommand);
+	const command = new PutRecordsCommand(putRecordsInput);
+	const response: PutRecordsCommandOutput = await kinesis.send(command);
 	console.debug("Posted messages: ", response);
 };

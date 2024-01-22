@@ -53,7 +53,36 @@ export class Datum
 		this.#hash = hash;
 	}
 
-	/// Compute the hash of the document.
+	/**
+	 * Answer the unique identifier for the receiver.
+	 *
+	 * @returns
+	 *   The unique identifier.
+	 */
+	public uuid = (): string => this.#uuid;
+
+	/**
+	 * Answer the document.
+	 *
+	 * @returns
+	 *   The document.
+	 */
+	public doc = (): string => this.#doc;
+
+	/**
+	 * Answer the target iteration count for the SHA-512 hash.
+	 *
+	 * @returns
+	 *   The target iteration count for the SHA-512 hash.
+	 */
+	public hashes = (): number => this.#hashes;
+
+	/**
+	 * Lazily compute the iterative SHA-512 hash of the document.
+	 *
+	 * @returns
+	 *   The hash of the document.
+	 */
 	public hash = (): string =>
 	{
 		if (this.#hash === undefined || this.#hash === null)
