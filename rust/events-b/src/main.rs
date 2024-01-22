@@ -2,7 +2,7 @@ use aws_lambda_events::event::kinesis::KinesisEvent;
 use aws_sdk_dynamodb::{types::AttributeValue, Client};
 use data::Datum;
 use lambda_runtime::{run, service_fn, Error, LambdaEvent};
-use tracing::{debug, info, trace};
+use tracing::{debug, error, info, trace};
 
 ////////////////////////////////////////////////////////////////////////////////
 ///                               Entry point.                               ///
@@ -46,9 +46,16 @@ async fn handle_request(
 	let mut records = vec![];
 	event.payload.records.iter().for_each(|record| {
 		let data = String::from_utf8_lossy(&record.kinesis.data.0);
-		let datum: Datum = serde_json::from_str(&data).unwrap();
-		trace!("Incoming datum: {:?}", datum);
-		records.push(datum);
+		trace!("JSON: {:?}", &data);
+		match serde_json::from_str(&data)
+		{
+			Ok(datum) => {
+				trace!("Incoming datum: {:?}", datum);
+				records.push(datum);
+			},
+			Err(error) =>
+				error!("Failed to deserialize JSON: {:?}", error)
+		}
 	});
 	debug!("Writing records to DynamoDB: {}", records.len());
 	for record in records {

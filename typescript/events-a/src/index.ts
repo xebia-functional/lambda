@@ -2,7 +2,6 @@ import
 	{
 		KinesisClient,
 		PutRecordsCommand,
-		PutRecordsCommandOutput,
 		PutRecordsInput,
 		PutRecordsRequestEntry
 	} from "@aws-sdk/client-kinesis";
@@ -31,7 +30,7 @@ const WRITE_STREAM = process.env["KINESIS_EVENT_B"];
  */
 export const handler: Handler = async (
 	event: KinesisStreamEvent
-): Promise<PutRecordsCommandOutput> =>
+): Promise<void> =>
 {
 	console.debug("Received event: ", event);
 	const writeStream = WRITE_STREAM;
@@ -46,7 +45,7 @@ export const handler: Handler = async (
 		const data =
 			Buffer.from(record.kinesis.data, 'base64').toString('ascii');
 		console.trace("ASCII: ", data);
-		let datum = Datum.fromJSON(data);
+		const datum = Datum.fromJSON(data);
 		if (datum === undefined)
 		{
 			console.error("Failed to deserialize datum: ", data);
@@ -55,8 +54,15 @@ export const handler: Handler = async (
 		console.trace("Deserialized datum: ", datum.toString());
 		datum.hash();
 		console.trace("Outgoing datum: ", datum.toString());
+		const json = JSON.stringify(datum);
+		console.trace("Outgoing JSON: ", json);
+		if (json === "{}")
+		{
+			console.error("JSON object is empty!");
+			continue;
+		}
 		const entry: PutRecordsRequestEntry = {
-			Data: Buffer.from(JSON.stringify(datum)),
+			Data: Buffer.from(json),
 			PartitionKey: record.kinesis.partitionKey
 		};
 		entries.push(entry);
@@ -70,5 +76,4 @@ export const handler: Handler = async (
 	const putRecordsCommand = new PutRecordsCommand(putRecordsInput);
 	const response = await kinesis.send(putRecordsCommand);
 	console.debug("Posted messages: ", response);
-	return response;
 };

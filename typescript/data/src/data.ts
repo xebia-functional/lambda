@@ -91,10 +91,23 @@ export class Datum
 	};
 
 	/**
+	 * Answer the JSON surrogate of the receiver.
+	 *
+	 * @returns
+	 *   The JSON surrogate of the receiver.
+	 */
+	public toJSON = (): object => ({
+		uuid: this.#uuid,
+		doc: this.#doc,
+		hashes: this.#hashes,
+		hash: this.#hash
+	});
+
+	/**
 	 * Answer the UUID as the debug representation of the receiver.
 	 *
 	 * @returns
-	 *    The UUID.
+	 *   The UUID.
 	 */
 	public toString = (): string =>
 	{
