@@ -15,7 +15,7 @@ object Datum {
     for
       rng <- Random.scalaUtilRandom[F]
       doc <- (0 until size).toList.traverse(_ => rng.nextPrintableChar).map(_.mkString)
-      datum = Datum(UUID.randomUUID(), s"scala:$doc", hashes, None)
+      datum = Datum(UUID.randomUUID(), s"$doc", hashes, None)
       _ <- Logger[F].trace(s"Generated datum: $datum")
     yield datum
 
