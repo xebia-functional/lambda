@@ -13,7 +13,6 @@ import com.amazonaws.services.lambda.runtime.events.KinesisEvent.KinesisEventRec
 import com.amazonaws.services.dynamodbv2.model.AttributeValue
 import io.circe.*
 import io.circe.generic.auto.*
-import io.circe.jawn.JawnParser
 
 import cats.effect.std.Env
 
@@ -23,9 +22,10 @@ object EventsBApp extends RequestHandler[KinesisEvent, Unit] {
 
   val WRITE_TABLE = "DYNAMODB_WRITE_TABLE"
 
-  val dynamoDbClient: IO[AmazonDynamoDBAsync]                             = IO(
+  val dynamoDbClient: IO[AmazonDynamoDBAsync] = IO(
     AmazonDynamoDBAsyncClientBuilder.defaultClient()
   )
+
   override def handleRequest(event: KinesisEvent, context: Context): Unit =
     import cats.effect.unsafe.implicits.global
     given logger: Logger[IO] = Logger.ioLogger(context.getLogger)
@@ -39,25 +39,25 @@ object EventsBApp extends RequestHandler[KinesisEvent, Unit] {
           )
         _        <- logger.debug(s"Writing messages to DynamoDB table: $table")
         client   <- dynamoDbClient
-        parser    = new JawnParser()
         records   = event.getRecords.asScala.toList
         _        <- logger.debug(s"Writing records to DynamoDB: ${records.size}")
-        _        <- records.traverse(processRecord(parser, client, table))
+        _        <- records.traverse(processRecord(storeDatum(client, table)))
         _        <- logger.debug(s"Wrote records to DynamoDB: ${records.size}")
       yield ()
     prg.unsafeRunSync()
 
-  def processRecord(parser: JawnParser, db: AmazonDynamoDBAsync, table: String)(
-      record: KinesisEventRecord
-  )(using logger: Logger[IO]): IO[Unit] =
-    for
-      jsonOpt <- IO.pure(
-                   parser.parseByteBuffer(record.getKinesis.getData).toOption
-                 )
-      _       <- logger.trace(s"JSON: $jsonOpt")
-      datum   <- IO.pure(jsonOpt.flatMap(_.as[Datum].toOption))
-      _       <- datum.map(storeDatum(db, table)).getOrElse(IO.unit)
-    yield ()
+  def processRecord(
+      store: Datum => IO[Unit]
+  )(using logger: Logger[IO]): KinesisEventRecord => IO[Unit] =
+    record =>
+      for
+        jsonOpt <- IO.pure(
+                     jawn.parseByteBuffer(record.getKinesis.getData).toOption
+                   )
+        _       <- logger.trace(s"JSON: $jsonOpt")
+        datum   <- IO.pure(jsonOpt.flatMap(_.as[Datum].toOption))
+        _       <- datum.map(store).getOrElse(IO.unit)
+      yield ()
 
   def storeDatum(db: AmazonDynamoDBAsync, table: String)(
       datum: Datum

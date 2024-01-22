@@ -9,7 +9,6 @@ import com.amazonaws.services.lambda.runtime.events.KinesisEvent
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent.KinesisEventRecord
 import io.circe.*
 import io.circe.generic.auto.*
-import io.circe.jawn.JawnParser
 import pt.kcry.sha.*
 
 import scala.jdk.CollectionConverters.*
@@ -37,7 +36,6 @@ object EventsAApp extends RequestHandler[KinesisEvent, Unit] {
 
   override def handleRequest(event: KinesisEvent, context: Context): Unit =
     import cats.effect.unsafe.implicits.global
-    val parser            = new JawnParser()
     given log: Logger[IO] = Logger.ioLogger(context.getLogger)
     val prg               =
       for
@@ -47,8 +45,7 @@ object EventsAApp extends RequestHandler[KinesisEvent, Unit] {
           IO.fromOption(streamOpt)(
             new RuntimeException(s"Missing environment variable $WRITE_STREAM")
           )
-        hashedRecords      <- event.getRecords.asScala.toList
-                                .traverse(processRecord(parser))
+        hashedRecords      <- event.getRecords.asScala.toList.traverse(processRecord)
         kinesis            <- Kinesis.kinesisClient
         successfullyPosted <- Kinesis.postData(
                                 kinesis,
@@ -60,12 +57,12 @@ object EventsAApp extends RequestHandler[KinesisEvent, Unit] {
     prg.unsafeRunSync()
 
   def processRecord(
-      parser: JawnParser
-  )(record: KinesisEventRecord)(using log: Logger[IO]): IO[Option[Datum]] =
+      record: KinesisEventRecord
+  )(using log: Logger[IO]): IO[Option[Datum]] =
     for
       _     <- log.trace(s"Incoming record: $record")
       json  <- IO.pure(
-                 parser.parseByteBuffer(record.getKinesis.getData).toOption
+                 jawn.parseByteBuffer(record.getKinesis.getData).toOption
                )
       _     <- log.trace(s"JSON: $json")
       datum <- IO.pure(json.flatMap(_.as[Datum].toOption))
