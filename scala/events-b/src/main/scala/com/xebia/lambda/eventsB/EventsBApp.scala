@@ -1,4 +1,5 @@
-package com.xebia.lambda.eventsB
+package com.xebia.lambda
+package eventsB
 
 import cats.effect.IO
 import cats.implicits.*
@@ -12,6 +13,8 @@ import io.circe.*
 import io.circe.generic.auto.*
 import io.circe.jawn.JawnParser
 
+import cats.effect.std.Env
+
 import scala.jdk.CollectionConverters.*
 
 object EventsBApp extends RequestHandler[KinesisEvent, Unit] {
@@ -21,24 +24,40 @@ object EventsBApp extends RequestHandler[KinesisEvent, Unit] {
   val dynamoDbClient: IO[AmazonDynamoDBAsync] = IO(AmazonDynamoDBAsyncClientBuilder.defaultClient())
   override def handleRequest(event: KinesisEvent, context: Context): Unit =
     import cats.effect.unsafe.implicits.global
+    given logger: Logger[IO] = Logger.ioLogger(context.getLogger)
     val prg =
       for
+        _ <- logger.debug(s"Received event: $event")
+        tableOpt <- Env[IO].get(WRITE_TABLE)
+        table <- IO.fromOption(tableOpt)(new RuntimeException(s"missing $WRITE_TABLE environment variable"))
+        _ <- logger.debug(s"Writing messages to DynamoDB table: $table")
         client <- dynamoDbClient
         parser = new JawnParser()
-        _ <- event.getRecords.asScala.toList.traverse(processRecord(parser, client))
+        records = event.getRecords.asScala.toList
+        _ <- logger.debug(s"Writing records to DynamoDB: ${records.size}")
+        _ <- records.traverse(processRecord(parser, client, table))
+        _ <- logger.debug(s"Wrote records to DynamoDB: ${records.size}")
       yield ()
     prg.unsafeRunSync()
 
-  def processRecord(parser: JawnParser, db: AmazonDynamoDBAsync)(record: KinesisEventRecord): IO[Unit] =
+  def processRecord(parser: JawnParser, db: AmazonDynamoDBAsync, table: String)(record: KinesisEventRecord)(using logger: Logger[IO]): IO[Unit] =
     for
-      json <- IO.fromEither(parser.parseByteBuffer(record.getKinesis.getData))
-      datum <- IO.fromEither(json.as[Datum])
-      fut = db.putItemAsync(WRITE_TABLE, Map(
-          "uuid" -> AttributeValue().withS(datum.uuid.toString),
-          "doc" -> AttributeValue().withS(datum.doc),
-          "hashes" -> AttributeValue().withN(datum.hashes.toString),
-          "hash" -> AttributeValue().withS(datum.hash.get)
-        ).asJava)
+      jsonOpt <- IO.pure(parser.parseByteBuffer(record.getKinesis.getData).toOption)
+      _ <- logger.trace(s"JSON: $jsonOpt")
+      datum <- IO.pure(jsonOpt.flatMap(_.as[Datum].toOption))
+      _ <- datum.map(storeDatum(db, table)).getOrElse(IO.unit)
+    yield ()
+
+  def storeDatum(db: AmazonDynamoDBAsync, table: String)( datum: Datum)(using logger: Logger[IO]) : IO[Unit]=
+    for
+      _ <- logger.trace(s"Incoming datum: $datum")
+      fut = db.putItemAsync(table, Map(
+        "uuid" -> AttributeValue().withS(datum.uuid.toString),
+        "doc" -> AttributeValue().withS(datum.doc),
+        "hashes" -> AttributeValue().withN(datum.hashes.toString),
+        "hash" -> AttributeValue().withS(datum.hash.get)
+      ).asJava)
       _ <- IO.blocking(fut)
+      _ <- logger.trace(s"Stored datum: $datum")
     yield ()
 }

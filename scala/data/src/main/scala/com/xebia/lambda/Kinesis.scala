@@ -17,15 +17,15 @@ object Kinesis {
         .withData(Datum.serialize(datum))): _*
     )
     val putRes: IO[PutRecordsResult] = {
-      val fut = kinesis.putRecordsAsync(putReq)
-      IO.blocking(fut.get())
+      IO.delay(kinesis.putRecordsAsync(putReq)).flatMap(fut => IO.blocking(fut.get()))
+
     }
 
-    log.debug(s"Posting messages to Kinesis stream: $stream") *> putRes.flatMap(res =>
+    log.debug(s"Posting ${data.size} messages to Kinesis stream: $stream") *> putRes.flatMap(res =>
       val successfullyPutRecords = res.getRecords.size() - res.getFailedRecordCount
-      if res.getFailedRecordCount > 0 then
+      (if res.getFailedRecordCount > 0 then
         log.debug(s"Failed to post ${res.getFailedRecordCount} records") *> IO.pure(successfullyPutRecords)
-      else IO.pure(successfullyPutRecords)
+      else IO.pure(successfullyPutRecords)) <* log.debug(s"Posted $successfullyPutRecords messages")
 
     )
 }
