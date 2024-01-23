@@ -36,10 +36,7 @@ async fn main() -> Result<(), Error> {
 
 /// Process an incoming Kinetic [event](KinesisEvent) by storing it into
 /// DynamoDB. Incoming messages are JSON serializations of [`Data`](Datum).
-async fn handle_request(
-	db: &Client,
-	event: LambdaEvent<KinesisEvent>
-) -> Result<(), Error> {
+async fn handle_request(db: &Client, event: LambdaEvent<KinesisEvent>) -> Result<(), Error> {
 	debug!("Received event: {:?}", event);
 	let write = std::env::var(WRITE_TABLE)?;
 	debug!("Writing messages to DynamoDB table: {}", write);
@@ -47,14 +44,12 @@ async fn handle_request(
 	event.payload.records.iter().for_each(|record| {
 		let data = String::from_utf8_lossy(&record.kinesis.data.0);
 		trace!("JSON: {:?}", &data);
-		match serde_json::from_str(&data)
-		{
+		match serde_json::from_str(&data) {
 			Ok(datum) => {
 				trace!("Incoming datum: {:?}", datum);
 				records.push(datum);
-			},
-			Err(error) =>
-				error!("Failed to deserialize JSON: {:?}", error)
+			}
+			Err(error) => error!("Failed to deserialize JSON: {:?}", error),
 		}
 	});
 	debug!("Writing records to DynamoDB: {}", records.len());
@@ -70,23 +65,21 @@ async fn handle_request(
 ////////////////////////////////////////////////////////////////////////////////
 
 /// Add a [`Datum`] to the specified DynamoDB table.
-pub async fn add_datum(
-	db: &Client,
-	table: &str,
-	d: Datum
-) -> Result<(), Error> {
+pub async fn add_datum(db: &Client, table: &str, d: Datum) -> Result<(), Error> {
 	trace!("Storing datum: {:?}", &d);
 	let uuid = AttributeValue::S(d.uuid.to_string());
 	let doc = AttributeValue::S(d.doc);
 	let hashes = AttributeValue::N(d.hashes.to_string());
 	let hash = AttributeValue::S(d.hash.unwrap().to_string());
+	let src = AttributeValue::N("1".to_owned());
 	let request = db
 		.put_item()
 		.table_name(table)
 		.item("uuid", uuid)
 		.item("doc", doc)
 		.item("hashes", hashes)
-		.item("hash", hash);
+		.item("hash", hash)
+		.item("src", src);
 	request.send().await?;
 	trace!("Stored datum");
 	Ok(())
