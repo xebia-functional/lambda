@@ -4,6 +4,15 @@ use sha3::{Digest, Sha3_512};
 use std::fmt::Write;
 use uuid::Uuid;
 
+// val dynamoDBAttributeMap: java.util.Map[String, AttributeValue] =
+//   val pricesByteArray = try Base64.getDecoder.decode(prices) catch
+//     case _ => throw ParseException("could not decode base64", prices)
+//   Map(
+//     "symbol" -> AttributeValue.builder.s(symbol).build,
+//     "time" -> AttributeValue.builder.n(time).build,
+//     "prices" -> AttributeValue.builder.b(SdkBytes.fromByteArray(pricesByteArray)).build
+//   ).asJava
+
 /// `Datum` represents an arbitrary document. Instances are generated
 /// pseudo-randomly by the `httpd-a` service and placed into Kinesis for
 /// consumption by the `events-a` service. `events-a` compute an iterative
@@ -21,7 +30,7 @@ pub struct Datum {
 	/// The target iteration count for the SHA-512 hash.
 	pub hashes: u16,
 
-	/// The SHA-512 hash of the document, computed by `events-a`.
+	/// The hash of the document, computed by `events-a`.
 	pub hash: Option<String>,
 }
 
