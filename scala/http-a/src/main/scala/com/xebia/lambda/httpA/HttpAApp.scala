@@ -23,7 +23,6 @@ import com.amazonaws.services.lambda.runtime.events.{
   APIGatewayV2HTTPEvent,
   APIGatewayV2HTTPResponse
 }
-import com.xebia.lambda.{Datum, Kinesis}
 
 import scala.util.Try
 import scala.jdk.CollectionConverters.*
@@ -52,24 +51,22 @@ object HttpAApp
       event: APIGatewayV2HTTPEvent,
       key: String,
       default: Int
-  ): Int =
-    (for {
-      param <- Option(event.getQueryStringParameters).flatMap(params =>
-                 Option(params.get(key))
-               )
-      value <- Try(param.toInt).toOption
-    } yield value).getOrElse(default)
+  )(using logger: Logger[IO]): IO[Int] =
+    for
+      queryParams <- IO.pure(Option(event.getQueryStringParameters.asScala))
+      _           <- logger.trace(s"Query parameters: $queryParams")
+      param       <- IO.pure(queryParams.flatMap(_.get(key)))
+      value       <- IO.pure(param.flatMap(p => Try(p.toInt).toOption))
+    yield value.getOrElse(default)
 
   def handleRequestIO(
       kinesis: AmazonKinesisAsync,
       event: APIGatewayV2HTTPEvent
   )(using log: Logger[IO]): IO[APIGatewayV2HTTPResponse] =
-    val chars                 = getParameterOrDefault(event, LENGTH_PARAM, 1024)
-    val hashes                = getParameterOrDefault(event, HASHES_PARAM, 100)
-    val messages              = getParameterOrDefault(event, MESSAGES_PARAM, 64)
-    val data: IO[List[Datum]] =
-      List.fill(messages)((chars, hashes)).traverse(Datum.random[IO].tupled)
     for
+      chars        <- getParameterOrDefault(event, LENGTH_PARAM, 1024)
+      hashes       <- getParameterOrDefault(event, HASHES_PARAM, 100)
+      messages     <- getParameterOrDefault(event, MESSAGES_PARAM, 64)
       _            <- log.debug(s"chars=$chars, hashes=$hashes, messages=$messages")
       stream       <- Env[IO].get(WRITE_STREAM)
       data         <- List

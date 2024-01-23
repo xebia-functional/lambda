@@ -43,7 +43,7 @@ lazy val root = project
 
 lazy val common = project
   .settings(commonSettings ++ circeSettings)
-  .in(file("data"))
+  .in(file("common"))
 
 lazy val httpA = project
   .in(file("http-a"))
