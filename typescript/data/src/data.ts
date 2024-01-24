@@ -87,12 +87,14 @@ export class Datum
 	{
 		if (this.#hash === undefined || this.#hash === null)
 		{
-			const hash = new SHA3(512);
+			let input = this.#doc;
 			for (let i = 0; i < this.#hashes; i++)
 			{
-				hash.update(this.#doc);
+				const hash = new SHA3(512);
+				hash.update(input);
+				input = hash.digest("hex").toUpperCase();
 			}
-			this.#hash = hash.digest("hex").toUpperCase();
+			this.#hash = input;
 		}
 		return this.#hash;
 	};
