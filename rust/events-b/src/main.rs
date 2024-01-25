@@ -1,6 +1,13 @@
 use aws_lambda_events::event::kinesis::KinesisEvent;
-use aws_sdk_dynamodb::{types::AttributeValue, Client};
+use aws_sdk_dynamodb::{
+	error::SdkError,
+	operation::put_item::{PutItemError, PutItemOutput},
+	types::AttributeValue,
+	Client,
+};
 use data::Datum;
+use futures::{future::join_all, Future};
+use lambda_http::Response;
 use lambda_runtime::{run, service_fn, Error, LambdaEvent};
 use tracing::{debug, error, info, trace};
 
@@ -52,11 +59,10 @@ async fn handle_request(db: &Client, event: LambdaEvent<KinesisEvent>) -> Result
 			Err(error) => error!("Failed to deserialize JSON: {:?}", error),
 		}
 	});
-	debug!("Writing records to DynamoDB: {}", records.len());
-	for record in records {
-		add_datum(db, &write, record).await?;
-	}
-	debug!("Wrote records to DynamoDB");
+	let count = records.len();
+	debug!("Writing records to DynamoDB: {}", count);
+	let _ = join_all(records.into_iter().map(|r| add_datum(db, &write, r)));
+	debug!("Stored items: {}", count);
 	Ok(())
 }
 
@@ -65,24 +71,27 @@ async fn handle_request(db: &Client, event: LambdaEvent<KinesisEvent>) -> Result
 ////////////////////////////////////////////////////////////////////////////////
 
 /// Add a [`Datum`] to the specified DynamoDB table.
-pub async fn add_datum(db: &Client, table: &str, d: Datum) -> Result<(), Error> {
+pub async fn add_datum(
+	db: &Client,
+	table: &str,
+	d: Datum,
+) -> impl Future<Output = Result<(), Error>> {
 	trace!("Storing datum: {:?}", &d);
 	let uuid = AttributeValue::S(d.uuid.to_string());
 	let doc = AttributeValue::S(d.doc);
 	let hashes = AttributeValue::N(d.hashes.to_string());
 	let hash = AttributeValue::S(d.hash.unwrap().to_string());
-	let src = AttributeValue::N("1".to_owned());
 	let request = db
 		.put_item()
 		.table_name(table)
 		.item("uuid", uuid)
 		.item("doc", doc)
 		.item("hashes", hashes)
-		.item("hash", hash)
-		.item("src", src);
-	request.send().await?;
-	trace!("Stored datum");
-	Ok(())
+		.item("hash", hash);
+	async {
+		request.send().await?;
+		Ok(())
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////

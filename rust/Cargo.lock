@@ -923,6 +923,7 @@ dependencies = [
  "base64",
  "data",
  "dotenv",
+ "futures",
  "lambda_http",
  "lambda_runtime",
  "rand",

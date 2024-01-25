@@ -1,10 +1,9 @@
-import
-	{
-		DynamoDBClient,
-		PutItemCommand,
-		PutItemCommandOutput,
-		PutItemInput
-	} from "@aws-sdk/client-dynamodb";
+import {
+  DynamoDBClient,
+  PutItemCommand,
+  PutItemCommandOutput,
+  PutItemInput,
+} from "@aws-sdk/client-dynamodb";
 import { Handler, KinesisStreamEvent } from "aws-lambda";
 import { Datum } from "../../data/src/data.js";
 
@@ -29,52 +28,39 @@ const WRITE_TABLE = process.env["DYNAMODB_WRITE_TABLE"];
  *   The {@link PutItemCommandOutput Kinesis response}.
  */
 export const handler: Handler = async (
-	event: KinesisStreamEvent
-): Promise<void> =>
-{
-	console.debug("Received event: ", event);
-	const writeTable = process.env["DYNAMODB_WRITE_TABLE"];
-	console.debug("Writing messages to DynamoDB table: ", writeTable);
-	const promises: Array<Promise<PutItemCommandOutput | undefined>> = [];
+  event: KinesisStreamEvent,
+): Promise<void> => {
+  console.debug("Received event: ", event);
+  const writeTable = process.env["DYNAMODB_WRITE_TABLE"];
+  console.debug("Writing messages to DynamoDB table: ", writeTable);
+  const promises: Array<Promise<PutItemCommandOutput | undefined>> = [];
 
-	for (const record of event.Records)
-	{
-		console.trace("Incoming record: ", record);
-		const base64 = record.kinesis.data.toString();
-		console.trace("Base64: ", base64);
-		const data =
-			Buffer.from(record.kinesis.data, 'base64').toString('ascii');
-		console.trace("ASCII: ", data);
-		const datum = Datum.fromJSON(data);
-		if (datum === undefined)
-		{
-			console.error("Failed to deserialize datum: ", data);
-			continue;
-		}
-		console.trace("Deserialized datum: ", datum.toString());
-		datum.hash();
-		console.trace("Outgoing datum: ", datum.toString());
-		const json = JSON.stringify(datum);
-		console.trace("Outgoing JSON: ", json);
-		if (json === "{}")
-		{
-			console.error("JSON object is empty!");
-			continue;
-		}
-		const item: PutItemInput = {
-			Item: {
-				uuid: { S: datum.uuid() },
-				doc: { S: datum.doc() },
-				hashes: { N: datum.hashes().toString() },
-				hash: { S: datum.hash() }
-			},
-			TableName: writeTable
-		};
-		console.debug("Storing datum: ", datum.hash());
-		const command: PutItemCommand = new PutItemCommand(item);
-		promises.push(db.send(command));
-	}
+  for (const record of event.Records) {
+    console.trace("Incoming record: ", record);
+    const base64 = record.kinesis.data.toString();
+    console.trace("Base64: ", base64);
+    const data = Buffer.from(record.kinesis.data, "base64").toString("ascii");
+    console.trace("ASCII: ", data);
+    const datum = Datum.fromJSON(data);
+    if (datum === undefined) {
+      console.error("Failed to deserialize datum: ", data);
+      continue;
+    }
+    console.trace("Deserialized datum: ", datum.toString());
+    const item: PutItemInput = {
+      Item: {
+        uuid: { S: datum.uuid() },
+        doc: { S: datum.doc() },
+        hashes: { N: datum.hashes().toString() },
+        hash: { S: datum.hash() },
+      },
+      TableName: writeTable,
+    };
+    console.debug("Storing datum: ", datum.hash());
+    const command: PutItemCommand = new PutItemCommand(item);
+    promises.push(db.send(command));
+  }
 
-	await Promise.all(promises);
-	console.debug("Stored items: ", promises.length);
+  await Promise.all(promises);
+  console.debug("Stored items: ", promises.length);
 };
