@@ -5,6 +5,7 @@ use data::Datum;
 
 use aws_sdk_kinesis::{types::builders::PutRecordsRequestEntryBuilder, Client};
 use lambda_http::{run, service_fn, Body, Error, Request, RequestExt, Response};
+use rand::{rngs::SmallRng, SeedableRng};
 use tracing::{debug, info, trace};
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -47,18 +48,19 @@ async fn handle_request(kinesis: &Client, event: Request) -> Result<Response<Bod
 
 	// Extract the query parameters from the request.
 	let chars = param_or_default(&event, LENGTH_PARAM, 1024usize);
-	let seed = param_or_default(&event, SEED_PARAM, u64::from_str_radix("Jenny8675309", 36)?);
+	let seed = param_or_default(&event, SEED_PARAM, u64::from_str_radix("Jenny", 36)?);
 	let hashes = param_or_default(&event, HASHES_PARAM, 100u16);
 	let messages = param_or_default(&event, MESSAGES_PARAM, 64usize);
 	debug!(
 		"chars={}, seed={}, hashes={}, messages={}",
 		chars, seed, hashes, messages
 	);
+	let mut rng = SmallRng::seed_from_u64(seed);
 
 	// Produce the requested number of random messages.
 	let mut batch = Vec::with_capacity(messages);
 	for _ in 0..messages {
-		let datum = Datum::random(chars, seed, hashes);
+		let datum = Datum::random(chars, &mut rng, hashes);
 		trace!("Generated datum: {:?}", &datum);
 		batch.push(datum);
 	}
