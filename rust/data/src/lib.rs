@@ -1,4 +1,4 @@
-use rand::{distributions::Alphanumeric, thread_rng, Rng};
+use rand::{distributions::Alphanumeric, rngs::SmallRng, Rng, SeedableRng};
 use serde::{Deserialize, Serialize};
 use sha3::{Digest, Sha3_512};
 use std::fmt::Write;
@@ -41,13 +41,13 @@ pub struct Datum {
 impl Datum {
 	/// Generate a new `Datum` with the given number of random characters and
 	/// target number of hash iterations.
-	pub fn random(chars: usize, hashes: u16) -> Self {
+	pub fn random(chars: usize, seed: u64, hashes: u16) -> Self {
 		Self {
 			uuid: Uuid::new_v4(),
 			doc: {
-				let mut rng = thread_rng();
-				(&mut rng)
-					.sample_iter(Alphanumeric)
+				let rng = SmallRng::seed_from_u64(seed);
+				// (&mut rng)
+				rng.sample_iter(Alphanumeric)
 					.take(chars)
 					.map(char::from)
 					.collect()

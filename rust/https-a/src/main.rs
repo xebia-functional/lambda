@@ -3,9 +3,9 @@ use std::str::FromStr;
 use aws_sdk_dynamodb::primitives::Blob;
 use data::Datum;
 
-use aws_sdk_kinesis::{Client, types::builders::PutRecordsRequestEntryBuilder};
+use aws_sdk_kinesis::{types::builders::PutRecordsRequestEntryBuilder, Client};
 use lambda_http::{run, service_fn, Body, Error, Request, RequestExt, Response};
-use tracing::{info, debug, trace};
+use tracing::{debug, info, trace};
 
 ////////////////////////////////////////////////////////////////////////////////
 ///                               Entry point.                               ///
@@ -42,22 +42,23 @@ async fn main() -> Result<(), Error> {
 /// - `chars`: The number of random characters to generate per message.
 /// - `hashes`: The number of hash iterations to perform per message.
 /// - `msgs`: The number of messages to post to Kinesis.
-async fn handle_request(
-	kinesis: &Client,
-	event: Request
-) -> Result<Response<Body>, Error> {
+async fn handle_request(kinesis: &Client, event: Request) -> Result<Response<Body>, Error> {
 	debug!("Received request: {:?}", event);
 
 	// Extract the query parameters from the request.
 	let chars = param_or_default(&event, LENGTH_PARAM, 1024usize);
+	let seed = param_or_default(&event, SEED_PARAM, u64::from_str_radix("Jenny8675309", 36)?);
 	let hashes = param_or_default(&event, HASHES_PARAM, 100u16);
 	let messages = param_or_default(&event, MESSAGES_PARAM, 64usize);
-	debug!("chars={}, hashes={}, messages={}", chars, hashes, messages);
+	debug!(
+		"chars={}, seed={}, hashes={}, messages={}",
+		chars, seed, hashes, messages
+	);
 
 	// Produce the requested number of random messages.
 	let mut batch = Vec::with_capacity(messages);
 	for _ in 0..messages {
-		let datum = Datum::random(chars, hashes);
+		let datum = Datum::random(chars, seed, hashes);
 		trace!("Generated datum: {:?}", &datum);
 		batch.push(datum);
 	}
@@ -97,7 +98,7 @@ fn param_or_default<T: FromStr>(event: &Request, name: &str, default: T) -> T {
 // environment.
 async fn post_data(
 	kinesis: &Client,
-	batch: impl IntoIterator<Item = Datum>
+	batch: impl IntoIterator<Item = Datum>,
 ) -> Result<usize, Error> {
 	let write = std::env::var(WRITE_STREAM)?;
 	debug!("Posting messages to Kinesis stream: {}", write);
@@ -131,6 +132,10 @@ async fn post_data(
 /// The name of the query parameter that specifies the number of random
 /// characters to generate.
 const LENGTH_PARAM: &str = "chars";
+
+/// The name of the query parameter that specifies the seed for random
+/// character generation.
+const SEED_PARAM: &str = "seed";
 
 /// The name of the query parameter that specifies the number of hash iterations
 /// to perform.
