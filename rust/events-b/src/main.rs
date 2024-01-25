@@ -71,15 +71,13 @@ pub async fn add_datum(db: &Client, table: &str, d: Datum) -> Result<(), Error> 
 	let doc = AttributeValue::S(d.doc);
 	let hashes = AttributeValue::N(d.hashes.to_string());
 	let hash = AttributeValue::S(d.hash.unwrap().to_string());
-	let src = AttributeValue::N("1".to_owned());
 	let request = db
 		.put_item()
 		.table_name(table)
 		.item("uuid", uuid)
 		.item("doc", doc)
 		.item("hashes", hashes)
-		.item("hash", hash)
-		.item("src", src);
+		.item("hash", hash);
 	request.send().await?;
 	trace!("Stored datum");
 	Ok(())
