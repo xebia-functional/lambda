@@ -1,6 +1,7 @@
 use aws_lambda_events::event::kinesis::KinesisEvent;
 use aws_sdk_dynamodb::{types::AttributeValue, Client};
 use data::Datum;
+use futures::{future::join_all, Future};
 use lambda_runtime::{run, service_fn, Error, LambdaEvent};
 use tracing::{debug, error, info, trace};
 
@@ -52,11 +53,10 @@ async fn handle_request(db: &Client, event: LambdaEvent<KinesisEvent>) -> Result
 			Err(error) => error!("Failed to deserialize JSON: {:?}", error),
 		}
 	});
+	let cnt = records.len();
 	debug!("Writing records to DynamoDB: {}", records.len());
-	for record in records {
-		add_datum(db, &write, record).await?;
-	}
-	debug!("Wrote records to DynamoDB");
+	join_all(records.into_iter().map(|r| add_datum(db, &write, r))).await;
+	debug!("Stored items: {}", cnt);
 	Ok(())
 }
 
@@ -65,7 +65,7 @@ async fn handle_request(db: &Client, event: LambdaEvent<KinesisEvent>) -> Result
 ////////////////////////////////////////////////////////////////////////////////
 
 /// Add a [`Datum`] to the specified DynamoDB table.
-pub async fn add_datum(db: &Client, table: &str, d: Datum) -> Result<(), Error> {
+fn add_datum(db: &Client, table: &str, d: Datum) -> impl Future<Output = Result<(), Error>> {
 	trace!("Storing datum: {:?}", &d);
 	let uuid = AttributeValue::S(d.uuid.to_string());
 	let doc = AttributeValue::S(d.doc);
@@ -78,9 +78,10 @@ pub async fn add_datum(db: &Client, table: &str, d: Datum) -> Result<(), Error> 
 		.item("doc", doc)
 		.item("hashes", hashes)
 		.item("hash", hash);
-	request.send().await?;
-	trace!("Stored datum");
-	Ok(())
+	async {
+		request.send().await?;
+		Ok(())
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////
