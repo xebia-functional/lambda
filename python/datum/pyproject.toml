@@ -3,10 +3,8 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "data"
+name = "datum"
 dynamic = ["version"]
-description = ''
-readme = "README.md"
 requires-python = ">=3.12"
 license = "Apache-2.0"
 keywords = []
@@ -21,7 +19,7 @@ classifiers = [
 dependencies = []
 
 [tool.hatch.version]
-path = "src/data/__about__.py"
+path = "src/datum/__about__.py"
 
 [tool.hatch.envs.default]
 dependencies = ["coverage[toml]>=6.5", "pytest"]
@@ -39,18 +37,5 @@ python = ["3.12"]
 dependencies = ["mypy>=1.0.0"]
 
 [tool.hatch.envs.types.scripts]
-lint = "pylint {args:src/data tests}"
-check = "mypy --install-types --non-interactive {args:src/data tests}"
-
-[tool.coverage.run]
-source_pkgs = ["data", "tests"]
-branch = true
-parallel = true
-omit = ["src/data/__about__.py"]
-
-[tool.coverage.paths]
-data = ["src/data", "*/data/src/data"]
-tests = ["tests", "*/data/tests"]
-
-[tool.coverage.report]
-exclude_lines = ["no cov", "if __name__ == .__main__.:", "if TYPE_CHECKING:"]
+lint = "pylint {args:src/datum tests}"
+check = "mypy --install-types --non-interactive {args:src/datum tests}"
