@@ -17,7 +17,7 @@ async fn main() -> Result<(), Error> {
 	// Initialize the logger. Disable per-line module name and time printing,
 	// since CloudWatch will take care of this.
 	tracing_subscriber::fmt()
-		.with_max_level(tracing::Level::TRACE)
+		.with_max_level(tracing::Level::WARN)
 		.with_target(false)
 		.without_time()
 		.init();
