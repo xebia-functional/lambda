@@ -11,6 +11,8 @@ import io.circe.*
 import io.circe.generic.auto.*
 import pt.kcry.sha.*
 
+import java.math.BigInteger
+import java.security.MessageDigest
 import scala.jdk.CollectionConverters.*
 object EventsAApp extends RequestHandler[KinesisEvent, Unit] {
 
@@ -18,20 +20,14 @@ object EventsAApp extends RequestHandler[KinesisEvent, Unit] {
 
   def computeHash(d: Datum): Datum =
     if d.hash.isEmpty then
-      val hashedBytes = (0 to d.hashes).foldLeft(d.doc.getBytes("UTF-8")) {
+      val md = MessageDigest.getInstance("SHA3-512")
+      val hash = (0 until d.hashes).foldLeft(d.doc) {
         case (h, _) =>
-          Sha3_512.hash(h)
+          val hashed = md.digest(h.getBytes("UTF-8"))
+          hashed.map(String.format("%02X",  _)).mkString
       }
 
-      d.copy(hash =
-        Some(
-          hashedBytes
-            .foldLeft(new StringBuilder())((sb, b) =>
-              sb ++= String.format("%02x", Byte.box(b))
-            )
-            .toString
-        )
-      )
+      d.copy(hash = Some(hash))
     else d
 
   override def handleRequest(event: KinesisEvent, context: Context): Unit =

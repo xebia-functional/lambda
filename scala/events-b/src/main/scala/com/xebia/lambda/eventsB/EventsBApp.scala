@@ -73,7 +73,7 @@ object EventsBApp extends RequestHandler[KinesisEvent, Unit] {
                 "hash"   -> AttributeValue().withS(datum.hash.get)
               ).asJava
             )
-      _  <- IO.blocking(fut)
+      _  <- IO.blocking(fut.get())
       _  <- logger.trace(s"Stored datum: $datum")
     yield ()
 }
