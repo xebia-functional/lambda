@@ -3,7 +3,7 @@ use aws_sdk_dynamodb::primitives::Blob;
 use aws_sdk_kinesis::{types::builders::PutRecordsRequestEntryBuilder, Client};
 use data::Datum;
 use lambda_runtime::{run, service_fn, Error, LambdaEvent};
-use tracing::{info, trace, debug};
+use tracing::{debug, error, info, trace};
 
 ////////////////////////////////////////////////////////////////////////////////
 ///                               Entry point.                               ///
@@ -38,10 +38,7 @@ async fn main() -> Result<(), Error> {
 /// Process an incoming Kinetic [event](KinesisEvent) by computing the hash for
 /// each message and then re-posting the augmented messages to another Kinesis
 /// stream. Incoming messages are JSON serializations of [`Data`](Datum).
-async fn handle_request(
-	kinesis: &Client,
-	event: LambdaEvent<KinesisEvent>
-) -> Result<(), Error> {
+async fn handle_request(kinesis: &Client, event: LambdaEvent<KinesisEvent>) -> Result<(), Error> {
 	debug!("Received event: {:?}", event);
 	let write = std::env::var(WRITE_STREAM)?;
 	debug!("Posting messages to Kinesis stream: {}", write);
@@ -50,7 +47,13 @@ async fn handle_request(
 		trace!("Incoming record: {:?}", record);
 		let data = String::from_utf8_lossy(&record.kinesis.data.0);
 		trace!("JSON: {:?}", data);
-		let mut data: Datum = serde_json::from_str(&data).unwrap();
+		let mut data: Datum = match serde_json::from_str(&data) {
+			Ok(data) => data,
+			Err(e) => {
+				error!("Failed to deserialize datum: {e}");
+				return;
+			}
+		};
 		trace!("Deserialized datum: {:?}", data);
 		data.hash();
 		trace!("Outgoing datum: {:?}", data);
