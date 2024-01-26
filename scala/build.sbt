@@ -51,9 +51,6 @@ lazy val httpA = project
 
 lazy val eventsA = project
   .in(file("events-a"))
-  .settings(
-    libraryDependencies += "pt.kcry" %% "sha" % "2.0.1"
-  )
   .dependsOn(common)
 
 lazy val eventsB = project

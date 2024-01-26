@@ -9,7 +9,6 @@ import com.amazonaws.services.lambda.runtime.events.KinesisEvent
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent.KinesisEventRecord
 import io.circe.*
 import io.circe.generic.auto.*
-import pt.kcry.sha.*
 
 import java.math.BigInteger
 import java.security.MessageDigest
