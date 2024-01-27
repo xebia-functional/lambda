@@ -14,15 +14,14 @@ from boto3.exceptions import Boto3Error
 from botocore.exceptions import ClientError
 
 from aws_lambda_powertools.utilities.typing import LambdaContext
-from mypy_boto3_kinesis.type_defs import PutRecordsRequestEntryTypeDef
 from mypy_boto3_kinesis.client import KinesisClient
+from mypy_boto3_kinesis.type_defs import PutRecordsRequestEntryTypeDef
 
 from datum import Datum
 
 # Set the logging level.
 logging.basicConfig(level = logging.DEBUG, force = True)
 
-# Set up the Kinesis client.
 kinesis: KinesisClient = client('kinesis')
 """The Kinesis client."""
 
@@ -35,7 +34,6 @@ def handler(event: dict, context: LambdaContext) -> None:
 	:param event: The incoming Kinetic event.
 	:param context: The Lambda context.
 	"""
-	print('Got here\n')
 	logging.debug('Received event: %s', event)
 	write_stream: str = os.environ['KINESIS_EVENT_B']
 	logging.debug('Posting messages to Kinesis stream: %s', write_stream)
@@ -58,8 +56,8 @@ def handler(event: dict, context: LambdaContext) -> None:
 	logging.debug('Posting messages: %d', len(entries))
 	try:
 		response = kinesis.put_records(
-			Records=entries,
-			StreamName=write_stream
+			Records = entries,
+			StreamARN = write_stream
 		)
 		logging.debug('Posted messages: %s', response)
 	except (Boto3Error, ClientError) as error:
