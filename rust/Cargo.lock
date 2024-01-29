@@ -876,7 +876,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5"
 
 [[package]]
-name = "events-a"
+name = "events-a-rs"
 version = "0.1.0"
 dependencies = [
  "aws-config",
@@ -893,7 +893,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "events-b"
+name = "events-b-rs"
 version = "0.1.0"
 dependencies = [
  "aws-config",
@@ -1179,7 +1179,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "df3b46402a9d5adb4c86a0cf463f42e19994e3ee891101b1841f30a545cb49a9"
 
 [[package]]
-name = "https-a"
+name = "https-a-rs"
 version = "0.1.0"
 dependencies = [
  "aws-config",

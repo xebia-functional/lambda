@@ -6,7 +6,7 @@ edition.workspace = true
 publish.workspace = true
 
 [package.metadata.lambda.deploy]
-memory = 512
+memory = 4096
 timeout = 60
 # tracing = "active"             # Tracing mode
 # role = "role-full-arn"         # Function's execution role
