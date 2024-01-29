@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
-members = ["data", "dbimporter", "https-a", "events-a", "events-b"]
-default-members = ["dbimporter", "https-a", "events-a", "events-b"]
+members = ["data", "dbimporter", "https-a-rs", "events-a-rs", "events-b-rs"]
+default-members = ["https-a-rs", "events-a-rs", "events-b-rs"]
 exclude = []
 
 [profile.release]
