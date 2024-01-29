@@ -41,7 +41,7 @@ object EventsBApp extends RequestHandler[KinesisEvent, Unit] {
         client   <- dynamoDbClient
         records   = event.getRecords.asScala.toList
         _        <- logger.debug(s"Writing records to DynamoDB: ${records.size}")
-        _        <- records.traverse(processRecord(storeDatum(client, table)))
+        _        <- records.parTraverse(processRecord(storeDatum(client, table)))
         _        <- logger.debug(s"Wrote records to DynamoDB: ${records.size}")
       yield ()
     prg.unsafeRunSync()
@@ -63,17 +63,19 @@ object EventsBApp extends RequestHandler[KinesisEvent, Unit] {
       datum: Datum
   )(using logger: Logger[IO]): IO[Unit] =
     for
-      _  <- logger.trace(s"Incoming datum: $datum")
-      fut = db.putItemAsync(
-              table,
-              Map(
-                "uuid"   -> AttributeValue().withS(datum.uuid.toString),
-                "doc"    -> AttributeValue().withS(datum.doc),
-                "hashes" -> AttributeValue().withN(datum.hashes.toString),
-                "hash"   -> AttributeValue().withS(datum.hash.get)
-              ).asJava
-            )
-      _  <- IO.blocking(fut.get())
-      _  <- logger.trace(s"Stored datum: $datum")
+      _   <- logger.trace(s"Incoming datum: $datum")
+      fut <- IO(
+               db.putItemAsync(
+                 table,
+                 Map(
+                   "uuid"   -> AttributeValue().withS(datum.uuid.toString),
+                   "doc"    -> AttributeValue().withS(datum.doc),
+                   "hashes" -> AttributeValue().withN(datum.hashes.toString),
+                   "hash"   -> AttributeValue().withS(datum.hash.get)
+                 ).asJava
+               )
+             )
+      _   <- IO.blocking(fut.get)
+      _   <- logger.trace(s"Stored datum: $datum")
     yield ()
 }

@@ -3,7 +3,7 @@ import
 		DynamoDBClient,
 		PutItemCommand,
 		PutItemCommandOutput,
-		PutItemInput
+		PutItemInput,
 	} from "@aws-sdk/client-dynamodb";
 import { Handler, KinesisStreamEvent } from "aws-lambda";
 import { Datum } from "../../data/src/data.js";
@@ -29,7 +29,7 @@ const WRITE_TABLE = process.env["DYNAMODB_WRITE_TABLE"];
  *   The {@link PutItemCommandOutput Kinesis response}.
  */
 export const handler: Handler = async (
-	event: KinesisStreamEvent
+	event: KinesisStreamEvent,
 ): Promise<void> =>
 {
 	console.debug("Received event: ", event);
@@ -42,8 +42,7 @@ export const handler: Handler = async (
 		console.trace("Incoming record: ", record);
 		const base64 = record.kinesis.data.toString();
 		console.trace("Base64: ", base64);
-		const data =
-			Buffer.from(record.kinesis.data, 'base64').toString('ascii');
+		const data = Buffer.from(record.kinesis.data, "base64").toString("ascii");
 		console.trace("ASCII: ", data);
 		const datum = Datum.fromJSON(data);
 		if (datum === undefined)
@@ -52,23 +51,14 @@ export const handler: Handler = async (
 			continue;
 		}
 		console.trace("Deserialized datum: ", datum.toString());
-		datum.hash();
-		console.trace("Outgoing datum: ", datum.toString());
-		const json = JSON.stringify(datum);
-		console.trace("Outgoing JSON: ", json);
-		if (json === "{}")
-		{
-			console.error("JSON object is empty!");
-			continue;
-		}
 		const item: PutItemInput = {
 			Item: {
 				uuid: { S: datum.uuid() },
 				doc: { S: datum.doc() },
 				hashes: { N: datum.hashes().toString() },
-				hash: { S: datum.hash() }
+				hash: { S: datum.hash() },
 			},
-			TableName: writeTable
+			TableName: writeTable,
 		};
 		console.debug("Storing datum: ", datum.hash());
 		const command: PutItemCommand = new PutItemCommand(item);

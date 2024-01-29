@@ -1,0 +1,45 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "events-a"
+version = "1.0.0"
+requires-python = ">=3.12"
+license = "Apache-2.0"
+authors = [{ name = "Todd L Smith", email = "todd.smith@xebia.com" }]
+classifiers = [
+	"Development Status :: 4 - Beta",
+	"Programming Language :: Python",
+	"Programming Language :: Python :: 3.12",
+	"Programming Language :: Python :: Implementation :: CPython",
+	"Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = [
+	"boto3 == 1.34.28",
+	"botocore == 1.34.28",
+	"boto3-stubs == 1.34.28",
+	"botocore-stubs == 1.34.28",
+	"boto3-stubs[dynamodb] == 1.34.28",
+	"boto3-stubs[kinesis] == 1.34.28",
+	"aws-lambda-powertools == 2.32.0"
+]
+
+[tool.hatch.envs.default]
+dependencies = []
+
+[[tool.hatch.envs.all.matrix]]
+python = ["3.12"]
+
+[tool.hatch.envs.types]
+dependencies = ["mypy == 1.8.0"]
+
+[tool.hatch.envs.types.scripts]
+lint = "pylint *.py"
+check = "mypy --install-types --non-interactive *.py"
+
+[tool.hatch.envs.default.scripts]
+clean = "rm -rf dist/*"
+package = "python package.py"
+create = "aws lambda create-function --function-name events-a-py --runtime python3.12 --role arn:aws:iam::516203532587:role/LambdaFn --zip-file fileb://dist/events-a.zip --handler events_a.handler"
+deploy = "aws lambda update-function-code --function-name events-a-py --zip-file fileb://dist/events-a.zip"
