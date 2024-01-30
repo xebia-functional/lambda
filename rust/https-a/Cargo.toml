@@ -1,5 +1,5 @@
 [package]
-name = "https-a"
+name = "https-a-rs"
 authors.workspace = true
 version.workspace = true
 edition.workspace = true

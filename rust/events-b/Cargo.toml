@@ -1,5 +1,5 @@
 [package]
-name = "events-b"
+name = "events-b-rs"
 authors.workspace = true
 version.workspace = true
 edition.workspace = true

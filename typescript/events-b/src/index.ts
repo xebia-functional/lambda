@@ -1,12 +1,26 @@
 import
-	{
-		DynamoDBClient,
-		PutItemCommand,
-		PutItemCommandOutput,
-		PutItemInput,
-	} from "@aws-sdk/client-dynamodb";
+{
+	DynamoDBClient,
+	PutItemCommand,
+	PutItemCommandOutput,
+	PutItemInput,
+} from "@aws-sdk/client-dynamodb";
 import { Handler, KinesisStreamEvent } from "aws-lambda";
+import winston from "winston";
 import { Datum } from "../../data/src/data.js";
+
+/** Set up the logger. */
+const logger = winston.createLogger({
+	level: "warn",
+	format: winston.format.combine(
+		winston.format.timestamp(),
+		winston.format.prettyPrint()
+	),
+	defaultMeta: { service: "events-a" },
+	transports: [
+		new winston.transports.Console()
+	]
+});
 
 /** The {@link DynamoDBClient DynamoDB client}. */
 const db = new DynamoDBClient({});
@@ -32,25 +46,25 @@ export const handler: Handler = async (
 	event: KinesisStreamEvent,
 ): Promise<void> =>
 {
-	console.debug("Received event: ", event);
+	logger.debug("Received event: ", event);
 	const writeTable = process.env["DYNAMODB_WRITE_TABLE"];
-	console.debug("Writing messages to DynamoDB table: ", writeTable);
+	logger.debug("Writing messages to DynamoDB table: ", writeTable);
 	const promises: Array<Promise<PutItemCommandOutput | undefined>> = [];
 
 	for (const record of event.Records)
 	{
-		console.trace("Incoming record: ", record);
+		logger.debug("Incoming record: ", record);
 		const base64 = record.kinesis.data.toString();
-		console.trace("Base64: ", base64);
+		logger.debug("Base64: ", base64);
 		const data = Buffer.from(record.kinesis.data, "base64").toString("ascii");
-		console.trace("ASCII: ", data);
+		logger.debug("ASCII: ", data);
 		const datum = Datum.fromJSON(data);
 		if (datum === undefined)
 		{
-			console.error("Failed to deserialize datum: ", data);
+			logger.error("Failed to deserialize datum: ", data);
 			continue;
 		}
-		console.trace("Deserialized datum: ", datum.toString());
+		logger.debug("Deserialized datum: ", datum.toString());
 		const item: PutItemInput = {
 			Item: {
 				uuid: { S: datum.uuid() },
@@ -60,11 +74,11 @@ export const handler: Handler = async (
 			},
 			TableName: writeTable,
 		};
-		console.debug("Storing datum: ", datum.hash());
+		logger.debug("Storing datum: ", datum.hash());
 		const command: PutItemCommand = new PutItemCommand(item);
 		promises.push(db.send(command));
 	}
 
 	await Promise.all(promises);
-	console.debug("Stored items: ", promises.length);
+	logger.debug("Stored items: ", promises.length);
 };

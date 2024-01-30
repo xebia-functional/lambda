@@ -9,11 +9,13 @@
 	"dependencies": {
 		"@aws-sdk/client-dynamodb": "3.485.0",
 		"data": "file:../data",
-		"node": "21.2.0"
+		"node": "21.2.0",
+		"winston": "3.11.0"
 	},
 	"devDependencies": {
 		"@types/aws-lambda": "8.10.131",
 		"@types/node": "20.11.0",
+		"@types/winston": "2.4.4",
 		"esbuild": "0.19.11"
 	},
 	"scripts": {

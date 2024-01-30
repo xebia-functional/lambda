@@ -19,7 +19,7 @@ from mypy_boto3_dynamodb.type_defs import PutItemInputRequestTypeDef
 from datum import Datum
 
 # Set the logging level.
-logging.basicConfig(level = logging.DEBUG, force = True)
+logging.basicConfig(level = logging.WARNING, force = True)
 
 db: DynamoDBClient = client('dynamodb')
 """The DynamoDB client."""
