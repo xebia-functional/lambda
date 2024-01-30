@@ -20,7 +20,7 @@ from mypy_boto3_kinesis.type_defs import PutRecordsRequestEntryTypeDef
 from datum import Datum
 
 # Set the logging level.
-logging.basicConfig(level = logging.DEBUG, force = True)
+logging.basicConfig(level = logging.WARNING, force = True)
 
 kinesis: KinesisClient = client('kinesis')
 """The Kinesis client."""

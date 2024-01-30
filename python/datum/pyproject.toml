@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "datum"
 dynamic = ["version"]
 requires-python = ">=3.12"
-license = "Apache-2.0"
+license = "MIT"
 keywords = []
 authors = [{ name = "Todd L Smith", email = "todd.smith@xebia.com" }]
 classifiers = [
