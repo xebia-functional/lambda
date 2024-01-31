@@ -237,10 +237,14 @@ Let's break that down:
 * `calls` is the number of function invocations.
 * `sum_duration` is the total billable time.
 * `avg_duration` is the average billable time.
-* `p0` is **XXXXXXXXXXXX EXPLAIN THIS XXXXXXXXXXXXXX**
-* `p(x)` is the time required for `x`% of the samples in the group to complete.
-  So, 25% of the samples completed by the time given by `p25`, 50% completed
+* `px` are performance percentiles. Specifically, `px` indicates that `x`% of
+  the samples in the group finished within this time. So, 25% of the samples
+  completed by the time given by `p25`, 50% completed
   by `p50`, and so forth.
+* `p0` is therefore the minimum observed completion time for a sample in the
+  group.
+* And `p100` is therefore the maximum observed completion time for a sample in
+  the group.
 
 # The results
 
