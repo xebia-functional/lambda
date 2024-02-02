@@ -7,10 +7,9 @@ potential peer review.
 
 # Meet the contestants
 
-* Rust: According to
-  [StackOverflow](https://stackoverflow.blog/2023/01/26/comparing-tag-trends-with-our-most-loved-programming-languages/),
-  Rust has been the most loved programming language among developers since
-  [2019](https://insights.stackoverflow.com/survey/2019). Rust also features the
+* Rust: According to StackOverflow, Rust has been the most loved programming
+  language among developers since
+  [2016](https://insights.stackoverflow.com/survey/2016). Rust also features the
   best combination of performance and safety among mainstream languages, which
   naturally makes it an interesting choice for AWS Lambda.
 * Scala: Xebia Functional has an extensive background in Scala development,
