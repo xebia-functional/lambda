@@ -44,6 +44,7 @@ formulate a suitable rubric.
 * The implementation should use ordinary code, follow common algorithms, and
   adhere to sound practice. No implementation should fare better (or worse) than
   any other due to an abundance (or dearth) of cleverness.
+* Official AWS SDKs should be used, not third-party alternatives.
 * The total cost of reproducing the benchmarks should be small, in case anyone
   wants to reprise the contest for themselves.
 
@@ -178,12 +179,17 @@ Let's establish the baseline metrics:
    collector thrash, and so forth. Naturally, increased memory commitment is a
    second cost axis on the platform, so any real-world deployment scenario
    needs to investigate where the sweet spot is.
-2. Each lambda is given 3 minutes to run. For the volume of work under
-   consideration this is an overabundance of time, which is perfect for avoiding
-   double counting compute time due to time quantum expirations and function
+2. Each lambda is given 15 minutes to run. For the volume of work under
+   consideration this is a vast overabundance of time, which is perfect for
+   avoiding double counting compute time due to execution timeouts and function
    retries.
 3. Each lambda uses dedicated Kinesis streams and DynamoDB tables, lest
    function interaction in the middleware layer complicate the analysis.
+4. Each lambda processes a total of 2,000 incoming events. We direct the
+   generator to inject events into event stream `A` in batches of 500.
+5. Where we don't provide configuration values, we use the defaults. This
+   simplicity makes it easier to set up the experiment and produce the
+   benchmarks.
 
 ## Benchmarks
 
@@ -192,11 +198,12 @@ We compute two different benchmarks:
 1. The maximum event batch size for `events-a` and `events-b` is set to 1. This
    case is not at all representative of real-world use cases, but minimizes
    variability and nondeterminism when taking measurements. It allows us to
-   extrapolate a kind of idealized unit cost.
+   extrapolate a kind of idealized unit cost. We refer to this as _benchmark #1_
+   is the results below.
 2. The maximum event batch size for `events-a` and `events-b` is set to 64. This
    case more closely aligns with real practice. The associated variances are
    present in almost all real-world use cases, so this gives us insight into
-   typical patterns.
+   typical patterns. We refer to this as _benchmark #2_ in the results below.
 
 We use the following [Cloudwatch](https://aws.amazon.com/cloudwatch/) [Logs
 (CWL)
@@ -208,15 +215,15 @@ filter @type = "REPORT"
 | parse @log /\d+:\/aws\/lambda\/(?<function>.*)/
 | stats
   count(*) as calls,
-  sum(@duration+coalesce(@initDuration,0)) as sum_duration,
-  avg(@duration+coalesce(@initDuration,0)) as avg_duration,
-  pct(@duration+coalesce(@initDuration,0), 0) as p0,
-  pct(@duration+coalesce(@initDuration,0), 25) as p25,
-  pct(@duration+coalesce(@initDuration,0), 50) as p50,
-  pct(@duration+coalesce(@initDuration,0), 75) as p75,
-  pct(@duration+coalesce(@initDuration,0), 90) as p90,
-  pct(@duration+coalesce(@initDuration,0), 95) as p95,
-  pct(@duration+coalesce(@initDuration,0), 100) as p100
+  sum(@duration + coalesce(@initDuration, 0)) as sum_duration,
+  avg(@duration + coalesce(@initDuration, 0)) as avg_duration,
+  pct(@duration + coalesce(@initDuration, 0), 0) as p0,
+  pct(@duration + coalesce(@initDuration, 0), 25) as p25,
+  pct(@duration + coalesce(@initDuration, 0), 50) as p50,
+  pct(@duration + coalesce(@initDuration, 0), 75) as p75,
+  pct(@duration + coalesce(@initDuration, 0), 90) as p90,
+  pct(@duration + coalesce(@initDuration, 0), 95) as p95,
+  pct(@duration + coalesce(@initDuration, 0), 100) as p100
   group by function, ispresent(@initDuration) as coldstart
 | sort by coldstart, function
 ```
@@ -246,6 +253,132 @@ Let's break that down:
 * And `p100` is therefore the maximum observed completion time for a sample in
   the group.
 
+The _final score_ for each benchmark is the _sum of sums_ of four groups:
+
+1. `events-a` warm start.
+2. `events-b` warm start.
+3. `events-a` cold start.
+4. `events-b` cold start.
+
+This score denotes the total billable compute time. This is the number that each
+contestant wants to minimize, as it translates directly into reduced cost on the
+AWS Lambda platform.
+
 # The results
 
-Okay, enough about process! It's time to check out the juicy results.
+Okay, enough about process! Now, the moment you've been waiting for: it's time
+to check out the juicy results. We caption the result tables with the
+approximate final score.
+
+## 4th place: Scala
+
+<figure>
+	<img
+		src="lambda-scala-1per-512MB.png"
+		alt="Scala 512MB Benchmark #1: ~322,599.50ms."/>
+	<figcaption>
+		Scala benchmark #1 results. Total time: ~322,599.50ms.
+	</figcaption>
+</figure>
+
+<figure>
+	<img
+		src="lambda-scala-64per-512MB.png"
+		alt="Scala Benchmark #2 Results: 171,061.43ms."
+	/>
+	<figcaption>
+		Scala benchmark #2 results. Total time: ~171,061.43ms.
+	</figcaption>
+</figure>
+
+We couldn't get Scala to perform either benchmark with only 128MB RAM, so we had
+to give the function 512MB RAM to even compete. A quick trip to the
+[AWS Lambda Pricing Calculator](https://s3.amazonaws.com/lambda-tools/pricing-calculator.html)
+and some basic data entry demonstrate that quadrupling the memory quadruples the
+memory-related cost — they are coupled linearly.
+
+## 3rd place: TypeScript
+
+<figure>
+	<img src="lambda-ts-1per.png" alt="TypeScript Benchmark #1: ~567,580.83ms."/>
+	<figcaption>
+		TypeScript benchmark #1 results. Total time: ~567,580.83ms.
+	</figcaption>
+</figure>
+
+<figure>
+	<img
+		src="lambda-ts-64per.png"
+		alt="TypeScript benchmark #2 Results: ~305,289.89ms."
+	/>
+	<figcaption>
+		TypeScript benchmark #2 results. Total time: ~305,289.89ms.
+	</figcaption>
+</figure>
+
+## 2nd place: Python
+
+<figure>
+	<img
+		src="lambda-py-1per.png"
+		alt="Python benchmark #1: ~162,305.73ms."/>
+	<figcaption>
+		Python benchmark #1 results. Total time: ~162,305.73ms.
+	</figcaption>
+</figure>
+
+<figure>
+	<img
+		src="lambda-py-64per.png"
+		alt="Python benchmark #2 Results: ~80,930.31ms."
+	/>
+	<figcaption>
+		Python benchmark #2 results. Total time: ~80,930.31ms.
+	</figcaption>
+</figure>
+
+The official AWS SDK for Python, [`boto3`](https://github.com/boto/boto3), does
+not offer an asynchronous client. The network calls to the remote API are
+inherently asynchronous, of course, but the client control flow is synchronous,
+meaning that the function is penalized by having to wait for an API call to
+complete before it can start the next one. There's an unofficial AWS SDK that
+provides an asynchronous client,
+[`aioboto3`](https://github.com/terrycain/aioboto3), but we eschewed its usage
+in order to adhere to the rules we established above. Python does really well
+despite this handicap, handily outperforming the other contestants so far.
+
+## 1st place: Rust
+
+<figure>
+	<img
+		src="lambda-rs-1per.png"
+		alt="Rust benchmark #1: ~43,458.59ms."/>
+	<figcaption>
+		Rust benchmark #1 results. Total time: ~43,458.59ms.
+	</figcaption>
+</figure>
+
+<figure>
+	<img
+		src="lambda-rs-64per.png"
+		alt="Rust benchmark #2 Results: ~18,735.37ms."
+	/>
+	<figcaption>
+		Rust benchmark #2 results. Total time: ~18,735.37ms.
+	</figcaption>
+</figure>
+
+But Rust is our crowned king of performance. Its one-at-a-time benchmark (#1)
+outperforms Python's one-at-a-time benchmark by ~373%, and even outperforms
+Python's 64-at-a-time benchmark (#2) by ~186%. And using a batch size of 64
+improves the performance of Rust by another ~232%.
+
+# Conclusion
+
+Let's make these results a little more abstract as a prelude to making them more
+concrete. For each of the two benchmarks, we declare that the first place score
+represents one _compute cost unit_ and that 128MB RAM represents one _memory
+cost unit_. We can now visualize the outcome simply.
+
+## Benchmark #1: cost unit graphs
+
