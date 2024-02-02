@@ -13,9 +13,11 @@ potential peer review.
   best combination of performance and safety among mainstream languages, which
   naturally makes it an interesting choice for AWS Lambda.
 * Scala: Xebia Functional has an extensive background in Scala development,
-  including AWS Lambda development, using tools like
-  [feral](https://github.com/typelevel/feral) to target both JVM and JavaScript
-  runtimes.
+  including AWS Lambda development. We target JVM 21 for our experiment. We are
+  aware that we could use a tool like
+  [feral](https://github.com/typelevel/feral) to target a JavaScript runtime
+  instead, and that this might produce a different outcome, but we want a
+  JVM-based contestant for improved coverage of the solution space.
 * Python: Consistently one of the most widely used and sought languages in
   recent years, Datadog
   [reports](https://www.datadoghq.com/state-of-serverless/) that Python is one
