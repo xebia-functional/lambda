@@ -160,7 +160,13 @@ This service simply accepts items posted to event stream `B` and passes them
 verbatim to DynamoDB. We endeavor to perform as little work as possible, with
 maximum parallelism and asynchrony for insertion. So wherever possible, we
 invoke the database insertion API asynchronously, once for each outgoing item,
-and then we gang the futures together and await their aggregate completion.
+and then we gang the futures together and await their aggregate completion. The
+following diagram shows how basic the service is:
+
+```mermaid
+flowchart LR
+	In[Receive\nEvent] -- event --> Output[DynamoDB]
+```
 
 ## Measurement
 
@@ -275,7 +281,8 @@ approximate final score.
 <figure>
 	<img
 		src="lambda-scala-1per-512MB.png"
-		alt="Scala 512MB Benchmark #1: ~322,599.50ms."/>
+		alt="Scala 512MB Benchmark #1: ~322,599.50ms."
+	/>
 	<figcaption>
 		Scala benchmark #1 results. Total time: ~322,599.50ms.
 	</figcaption>
@@ -300,7 +307,9 @@ memory-related cost — they are coupled linearly.
 ## 3rd place: TypeScript
 
 <figure>
-	<img src="lambda-ts-1per.png" alt="TypeScript Benchmark #1: ~567,580.83ms."/>
+	<img
+		src="lambda-ts-1per.png"
+		alt="TypeScript Benchmark #1: ~567,580.83ms."/>
 	<figcaption>
 		TypeScript benchmark #1 results. Total time: ~567,580.83ms.
 	</figcaption>
@@ -375,10 +384,55 @@ improves the performance of Rust by another ~232%.
 
 # Conclusion
 
-Let's make these results a little more abstract as a prelude to making them more
-concrete. For each of the two benchmarks, we declare that the first place score
-represents one _compute cost unit_ and that 128MB RAM represents one _memory
-cost unit_. We can now visualize the outcome simply.
+Let's aggregate the results for benchmark #1:
 
-## Benchmark #1: cost unit graphs
+![Benchmark #1 summary table.](table-1per-all.png)
 
+Which we can visualize in the following bar chart:
+
+![Benchmark #1 summary chart.](chart-1per-all.png)
+
+The X-axis shows the four contestants, sorted by ascending cost. The Y-axis
+shows the adjusted final scores. Each score is broken down as above, by service
+and cold start indicator, and then multiplied by function memory increments. If
+you play around with the
+[AWS Lambda Pricing Calculator](https://s3.amazonaws.com/lambda-tools/pricing-calculator.html),
+you will see that memory serves as a multiplier to cost, with each 128MB
+incrementing the applied coefficient by one. Scala is here penalized with a 4x
+multiplier, because $512MB / 128MB = 4$.
+
+How does that translate to cost? Well, let's put it through the calculator,
+using the `p100` warm `event-a` times from benchmark #1 and 1,000,000,000
+(one billion) executions.
+
+### Scala
+
+![Scala cost ≊ $101,795.32](calc-scala.png)
+
+### TypeScript
+
+![TypeScript cost ≊ $1,831.58](calc-ts.png)
+
+### Python
+
+![Python cost ≊ $629.25](calc-py.png)
+
+### Rust
+
+![Rust cost ≊ $368.78](calc-rs.png)
+
+## Final thoughts
+
+Consider these guidelines rather than gospel. Your own use case may alter one
+or more aspects of the calculus presented here. Perhaps your process lives long
+enough for the JVM to warm up properly, and the dynamic translator eventually
+overtakes the static optimizations performed by a native compiler. Or maybe you
+have a transpiler that allows you to write your favorite interpreted language
+but run it at native speeds. Or maybe you can leverage some readily available,
+well-tested library that only has good bindings for your language, and that
+library erases the performance advantage of using a faster language.
+
+But all other things being equal, you may want to write your AWS Lambda
+functions in Rust, because you will probably realize significant performance
+gains and cost reductions. Rust talent is still relatively rare in the
+workforce, but contracting might prove an affordable option.
