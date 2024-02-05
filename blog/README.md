@@ -11,13 +11,18 @@ potential peer review.
   language among developers since
   [2016](https://insights.stackoverflow.com/survey/2016). Rust also features the
   best combination of performance and safety among mainstream languages, which
-  naturally makes it an interesting choice for AWS Lambda.
-* Scala: Xebia Functional has an extensive background in Scala development,
-  including AWS Lambda development. We target JVM 21 for our experiment. We are
-  aware that we could use a tool like
+  naturally makes it an interesting choice for AWS Lambda. Rust just came to AWS
+  Lambda in
+  [November 2023](https://aws.amazon.com/blogs/developer/announcing-general-availability-of-the-aws-sdk-for-rust/),
+  so probably a lot of folks are wondering whether to try it out.
+* Scala: Xebia has an extensive background in JVM development, including AWS
+  Lambda development. We target JVM 21 for our experiment, using Scala as the
+  language frontend and ecosystem, bug one might reasonably expect similar
+  outcomes for Java and Kotlin. We are aware that we could use a tool like
   [feral](https://github.com/typelevel/feral) to target a JavaScript runtime
-  instead, and that this might produce a different outcome, but we want a
-  JVM-based contestant for improved coverage of the solution space.
+  instead, and that this could certainly produce a different outcome, but we
+  abstain because we want a JVM-based contestant for improved coverage of the
+  solution space.
 * Python: Consistently one of the most widely used and sought languages in
   recent years, Datadog
   [reports](https://www.datadoghq.com/state-of-serverless/) that Python is one
@@ -282,10 +287,10 @@ approximate final score.
 <figure>
 	<img
 		src="lambda-scala-1per-512MB.png"
-		alt="Scala 512MB Benchmark #1: ~322,599.50ms."
+		alt="Scala 512MB Benchmark #1: ~322,048.93ms."
 	/>
 	<figcaption>
-		Scala benchmark #1 results. Total time: ~322,599.50ms.
+		Scala benchmark #1 results. Total time: ~322,048.93ms.
 	</figcaption>
 </figure>
 
@@ -310,9 +315,9 @@ memory-related cost — they are coupled linearly.
 <figure>
 	<img
 		src="lambda-ts-1per.png"
-		alt="TypeScript Benchmark #1: ~567,580.83ms."/>
+		alt="TypeScript Benchmark #1: ~568,580.83ms."/>
 	<figcaption>
-		TypeScript benchmark #1 results. Total time: ~567,580.83ms.
+		TypeScript benchmark #1 results. Total time: ~568,580.83ms.
 	</figcaption>
 </figure>
 
@@ -387,40 +392,77 @@ improves the performance of Rust by another ~232%.
 
 Let's aggregate the results for benchmark #1:
 
-![Benchmark #1 summary table.](table-1per-all.png)
+![Benchmark #1 summary table.](table-1per-billedms-all.png)
 
-Which we can visualize in the following bar chart:
+* `Cold events-a`: This is the sum, in milliseconds, of all cold invocations of
+  `events-a`.
+* `Warm events-a`: This is the sum, in milliseconds, of all warm invocations of
+  `events-a`.
+* `Cold events-b`: This is the sum, in milliseconds, of all cold invocations of
+  `events-b`.
+* `Warm events-b`: This is the sum, in milliseconds, of all warm invocations of
+  `events-b`.
+* `Sum of ms for all calls`: This is the sum, in milliseconds, of all
+  invocations of the contestant language, irrespective of service or start
+  temperature. It is obtained simply by summing `Cold events-a`, `Warm
+  events-a`, `Cold events-b`, and `Warm events-b`.
+* `Lambda function calls made`: This is the total number of function
+  invocations, irrespective of service or start temperature. It is always
+  `4,000` in our benchmarks.
+* `Average ms per call`: This is the average call time, in milliseconds, of an
+  invocation of the contestant language, irrespective of service or start
+  temperature. It is obtained by dividing `Sum of ms for all calls` by `Lambda
+  function calls made`.
+* `128MB increments`: This is the amount of RAM used by the contestant language,
+  as the number of 128MB RAM increments. This value serves as a cost multiplier.
+  For Scala only, it is $512MB / 128MB = 4$; for the other three languages, it
+  is simply 1.
+* `Billed units per call`: This is the average number of billing units, computed
+  as `Average ms per call` times `128MB increments`. This is our abstract cost
+  metric, permitting relative analysis of the contestants.
 
-![Benchmark #1 summary chart.](chart-1per-all.png)
+Which we can visualize `Billed units per call` in the following bar chart:
 
-The X-axis shows the four contestants, sorted by ascending cost. The Y-axis
-shows the adjusted final scores. Each score is broken down as above, by service
-and cold start indicator, and then multiplied by function memory increments. If
-you play around with the
-[AWS Lambda Pricing Calculator](https://s3.amazonaws.com/lambda-tools/pricing-calculator.html),
-you will see that memory serves as a multiplier to cost, with each 128MB
-incrementing the applied coefficient by one. Scala is here penalized with a 4x
-multiplier, because $512MB / 128MB = 4$.
+![Billed units per call chart.](chart-1per-billedms-all.png)
 
-How does that translate to cost? Well, let's put it through the calculator,
-using the `p100` warm `event-a` times from benchmark #1 and 1,000,000,000
-(one billion) executions.
+With some simple math, we can establish cost ratios that will guide us in
+decision making. Since Rust yielded the lowest billed units per call (`11`), we
+divide each of the four contestant values by Rust's value to obtain our cost
+ratios:
 
-### Scala
+* Rust: $11 / 11 = 1$
+* Python: $41 / 11 \approx 3.73$
+* TypeScript: $143 / 11 = 13$
+* Scala: $324 / 11 \approx 29.45$
 
-![Scala cost ≊ $101,795.32](calc-scala.png)
+So if you are spending $20,000 per month on a lambda function written in Scala
+(or some other JVM-targeted language), you could expect to pay only
+$20,000 / 29.45 \approx 679.12$ per month for the same behavior after porting to
+Rust: a savings of ~96.6%.
 
-### TypeScript
+With a little bit of work, you can prove these results for yourself using the
+[AWS Lambda Pricing Calculator](https://s3.amazonaws.com/lambda-tools/pricing-calculator.html):
 
-![TypeScript cost ≊ $1,831.58](calc-ts.png)
+<figure>
+	<img
+		src="calc-scala.png"
+		alt="Rust benchmark #1: ~43,458.59ms."/>
+	<figcaption>
+		Example: Scala cost = $20,000.
+	</figcaption>
+</figure>
 
-### Python
+<figure>
+	<img
+		src="calc-rs.png"
+		alt="Rust benchmark #1: ~43,458.59ms."/>
+	<figcaption>
+		Example: Rust cost = $672.88.
+	</figcaption>
+</figure>
 
-![Python cost ≊ $629.25](calc-py.png)
-
-### Rust
-
-![Rust cost ≊ $368.78](calc-rs.png)
+The screenshots show a difference between expected and official of only
+$679.12 - 672.88 = 6.24$: less than 1% error.
 
 ## Final thoughts
 
@@ -433,7 +475,10 @@ but run it at native speeds. Or maybe you can leverage some readily available,
 well-tested library that only has good bindings for your language, and that
 library erases the performance advantage of using a faster language.
 
-But all other things being equal, you may want to write your AWS Lambda
-functions in Rust, because you will probably realize significant performance
-gains and cost reductions. Rust talent is still relatively rare in the
-workforce, but contracting might prove an affordable option.
+But all other things being equal, Rust can help you improve performance, reduce
+operational costs, increase security and safety, and enhance developer
+productivity. Don't let lack of in-house Rust talent discourage you: Xebia
+specializes in cutting-edge technology, including Rust, and we can help you
+transition smoothly. Contact us today to learn how our Rust team can take your
+projects to the next level, ensuring that they run faster, smoother, and more
+cost-effectively in the cloud.
