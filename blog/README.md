@@ -17,7 +17,7 @@ potential peer review.
   so probably a lot of folks are wondering whether to try it out.
 * Scala: Xebia has an extensive background in JVM development, including AWS
   Lambda development. We target JVM 21 for our experiment, using Scala as the
-  language frontend and ecosystem, bug one might reasonably expect similar
+  language frontend and ecosystem, but one might reasonably expect similar
   outcomes for Java and Kotlin. We are aware that we could use a tool like
   [feral](https://github.com/typelevel/feral) to target a JavaScript runtime
   instead, and that this could certainly produce a different outcome, but we
