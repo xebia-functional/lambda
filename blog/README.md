@@ -7,7 +7,7 @@ potential peer review.
 
 # Meet the contestants
 
-* Rust: According to StackOverflow, Rust has been the most loved programming
+* **Rust**: According to StackOverflow, Rust has been the most loved programming
   language among developers since
   [2016](https://insights.stackoverflow.com/survey/2016). Rust also features the
   best combination of performance and safety among mainstream languages, which
@@ -15,7 +15,7 @@ potential peer review.
   Lambda in
   [November 2023](https://aws.amazon.com/blogs/developer/announcing-general-availability-of-the-aws-sdk-for-rust/),
   so probably a lot of folks are wondering whether to try it out.
-* Scala: Xebia has an extensive background in JVM development, including AWS
+* **Scala**: Xebia has an extensive background in JVM development, including AWS
   Lambda development. We target JVM 21 for our experiment, using Scala as the
   language frontend and ecosystem, bug one might reasonably expect similar
   outcomes for Java and Kotlin. We are aware that we could use a tool like
@@ -23,13 +23,13 @@ potential peer review.
   instead, and that this could certainly produce a different outcome, but we
   abstain because we want a JVM-based contestant for improved coverage of the
   solution space.
-* Python: Consistently one of the most widely used and sought languages in
+* **Python**: Consistently one of the most widely used and sought languages in
   recent years, Datadog
   [reports](https://www.datadoghq.com/state-of-serverless/) that Python is one
   of the top choices for AWS Lambda development. We use
   [`mypy`](https://mypy-lang.org/) for the safety afforded by a static type
   system.
-* TypeScript: Programming
+* **TypeScript**: Programming
   [equates](https://insights.stackoverflow.com/survey/2021#most-loved-dreaded-and-wanted-language-love-dread)
   to web programming for the majority of software developers, and JavaScript
   remains the most widely used programming language of them all. Node.js was
@@ -99,7 +99,7 @@ It's a simple web service that accepts:
   graph optimization, etc. The parameter is tunable to accommodate different
   algorithmic costs and complexities.
 * A `messages` parameter that specifies how many Kinesis events to generate at
-  once. The maximum injection size is 500.
+  once. The maximum injection size is `500`.
 
 JSON is the currency of our services. The generator produces JSON documents that
 comprise:
@@ -207,14 +207,14 @@ Let's establish the baseline metrics:
 
 We compute two different benchmarks:
 
-1. The maximum event batch size for `events-a` and `events-b` is set to 1. This
-   case is not at all representative of real-world use cases, but minimizes
+1. The maximum event batch size for `events-a` and `events-b` is set to `1`.
+   This case is not at all representative of real-world use cases, but minimizes
    variability and nondeterminism when taking measurements. It allows us to
    extrapolate a kind of idealized unit cost. We refer to this as _benchmark #1_
    is the results below.
-2. The maximum event batch size for `events-a` and `events-b` is set to 64. This
-   case more closely aligns with real practice. The associated variances are
-   present in almost all real-world use cases, so this gives us insight into
+2. The maximum event batch size for `events-a` and `events-b` is set to `64`.
+   This case more closely aligns with real practice. The associated variances
+   are present in almost all real-world use cases, so this gives us insight into
    typical patterns. We refer to this as _benchmark #2_ in the results below.
 
 We use the following [Cloudwatch](https://aws.amazon.com/cloudwatch/) [Logs
@@ -247,9 +247,8 @@ Let's break that down:
 * We group the results by function and cold start indicator.
 * All timings are given in milliseconds (ms).
 * `function` is the function itself.
-* `coldstart` is 1 if the function started cold and 0 if it started warm. During
-  a [cold
-  start](https://aws.amazon.com/blogs/compute/operating-lambda-performance-optimization-part-1/),
+* `coldstart` is `1` if the function started cold and `0` if it started warm.
+  During a [cold start](https://aws.amazon.com/blogs/compute/operating-lambda-performance-optimization-part-1/),
   AWS Lambda has to deploy the function internally and start an appropriately
   configured execution environment. Cold starts can be _much_ slower than warm
   starts, based on package size and language runtime.
@@ -394,34 +393,35 @@ Let's aggregate the results for benchmark #1:
 
 ![Benchmark #1 summary table.](table-1per-billedms-all.png)
 
-* `Cold events-a`: This is the sum, in milliseconds, of all cold invocations of
+* **Cold `events-a`**: This is the sum, in milliseconds, of all cold invocations of
   `events-a`.
-* `Warm events-a`: This is the sum, in milliseconds, of all warm invocations of
+* **Warm `events-a`**: This is the sum, in milliseconds, of all warm invocations of
   `events-a`.
-* `Cold events-b`: This is the sum, in milliseconds, of all cold invocations of
+* **Cold `events-b`**: This is the sum, in milliseconds, of all cold invocations of
   `events-b`.
-* `Warm events-b`: This is the sum, in milliseconds, of all warm invocations of
+* **Warm `events-b`**: This is the sum, in milliseconds, of all warm invocations of
   `events-b`.
-* `Sum of ms for all calls`: This is the sum, in milliseconds, of all
+* **Sum of ms for all calls**: This is the sum, in milliseconds, of all
   invocations of the contestant language, irrespective of service or start
-  temperature. It is obtained simply by summing `Cold events-a`, `Warm
-  events-a`, `Cold events-b`, and `Warm events-b`.
-* `Lambda function calls made`: This is the total number of function
+  temperature. It is obtained simply by summing **Cold `events-a`**, **Warm
+  `events-a`**, **Cold `events-b`**, and **Warm `events-b`**. In other words,
+  this is the final score determined above.
+* **Lambda function calls made**: This is the total number of function
   invocations, irrespective of service or start temperature. It is always
   `4,000` in our benchmarks.
-* `Average ms per call`: This is the average call time, in milliseconds, of an
+* **Average ms per call**: This is the average call time, in milliseconds, of an
   invocation of the contestant language, irrespective of service or start
-  temperature. It is obtained by dividing `Sum of ms for all calls` by `Lambda
-  function calls made`.
-* `128MB increments`: This is the amount of RAM used by the contestant language,
-  as the number of 128MB RAM increments. This value serves as a cost multiplier.
-  For Scala only, it is $512MB / 128MB = 4$; for the other three languages, it
-  is simply 1.
-* `Billed units per call`: This is the average number of billing units, computed
-  as `Average ms per call` times `128MB increments`. This is our abstract cost
-  metric, permitting relative analysis of the contestants.
+  temperature. It is obtained by dividing **Sum of ms for all calls** by
+  **Lambda function calls made**.
+* **128MB increments**: This is the amount of RAM used by the contestant
+  language, as the number of 128MB RAM increments. This value serves as a cost
+  multiplier. For Scala only, it is $512MB / 128MB = 4$; for the other three
+  languages, it is simply `1`.
+* **Billed units per call**: This is the average number of billing units,
+  computed as **Average ms per call** times **128MB increments**. This is our
+  abstract cost metric, permitting relative analysis of the contestants.
 
-Which we can visualize `Billed units per call` in the following bar chart:
+We can visualize **Billed units per call** in the following bar chart:
 
 ![Billed units per call chart.](chart-1per-billedms-all.png)
 
