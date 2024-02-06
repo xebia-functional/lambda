@@ -8,5 +8,8 @@
 	"type": "module",
 	"dependencies": {
 		"sha3": "2.1.4"
+	},
+	"devDependencies": {
+		"typescript": "5.3.3"
 	}
 }
