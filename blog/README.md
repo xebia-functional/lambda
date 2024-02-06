@@ -482,3 +482,10 @@ specializes in cutting-edge technology, including Rust, and we can help you
 transition smoothly. Contact us today to learn how our Rust team can take your
 projects to the next level, ensuring that they run faster, smoother, and more
 cost-effectively in the cloud.
+
+### Special thanks
+
+Finally, I would like to give a shout-out to my fellow Xebians, Paul LaCrosse
+and Valentin Kasas, who helped me with development, benchmarking, asset
+creation, proofing, and sanity checking. I think I am still sane, and I have
+them to thank for it.
