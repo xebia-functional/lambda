@@ -1,9 +1,9 @@
 In this blog post, we examine the relative costs of different language runtimes
 on AWS Lambda. Many languages can be used with AWS Lambda today, so we focus on
 four that are interesting. We made the complete
-[project](https://github.com/47deg/lambda) available on GitHub, because any
+[project](https://github.com/xebia-functional/lambda) available on GitHub, because any
 benchmarking claims that we make are frivolous without the supporting code for
-potential peer review.
+potential peer review. 
 
 # Meet the contestants
 
