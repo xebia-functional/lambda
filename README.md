@@ -8,6 +8,6 @@ benchmarks for AWS Lambda and identify cost-saving opportunities:
 * [TypeScript](typescript/README.md)
 * [Scala](scala/README.md)
 
-Details of the contest are available in the [blogpost](blog/README.md). For
+Details of the contest are available in the [blogpost](https://xebia.com/blog/aws-lambda-benchmarking/). For
 specific installation and building instructions, please refer to respective
 documentation for each implementation.
